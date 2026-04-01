@@ -7,15 +7,46 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Build output
+dist/
+dist-ssr/
+coverage/
+*.tsbuildinfo
+.vite/
+
+# Backend build/runtime artifacts
+backend/dist/
+backend/coverage/
+backend/uploads/
+backend/data/db.json
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Local overrides
 *.local
+
+# Tool caches
+.eslintcache
+.prettier-cache
+.cache/
+.tmp/
+.temp/
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*

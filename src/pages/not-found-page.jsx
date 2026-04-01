@@ -1,8 +1,8 @@
-import { Link } from 'react-router-dom'
+import { Link } from "react-router-dom";
 
 export default function NotFoundPage() {
   return (
-    <section className="rounded-2xl border bg-white p-8 shadow-sm text-center">
+    <section className="flex h-screen flex-col items-center justify-center rounded-2xl border bg-white p-8 text-center shadow-sm">
       <p className="text-6xl font-bold text-slate-900">404</p>
       <p className="mt-2 text-slate-600">Bunday sahifa topilmadi.</p>
       <Link
@@ -12,5 +12,5 @@ export default function NotFoundPage() {
         Bosh sahifaga qaytish
       </Link>
     </section>
-  )
+  );
 }
