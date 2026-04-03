@@ -10,7 +10,8 @@ import {
   registerUser,
   saveAuthSession,
 } from "@/lib/auth";
-import { ArrowLeft, AtSign, Eye, EyeOff, Globe } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ArrowLeft, AtSign, Eye, EyeOff, Globe, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -114,7 +115,7 @@ export default function AuthPage() {
   }, []);
 
   const formTitle = useMemo(
-    () => (tab === "login" ? "Kirish" : "Ro'yxatdan o'tish"),
+    () => (tab === "login" ? "Akkauntga Kirish" : "Ro'yxatdan o'tish"),
     [tab],
   );
 
@@ -225,170 +226,181 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white px-4 py-8 text-slate-950">
-      <div className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[1.2fr_1fr]">
-        <section className="relative overflow-hidden rounded-2xl border border-slate-900 bg-slate-950 p-6 text-white md:p-8">
-          <Link
-            to="/"
-            className="mb-8 inline-flex items-center gap-2 text-sm text-slate-200 hover:text-white"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Bosh sahifaga qaytish
-          </Link>
+    <div className="min-h-screen bg-slate-50 px-4 py-8 text-slate-950 flex items-center justify-center">
+      <div className="mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[1.2fr_1fr] relative z-10">
+        <section className="relative overflow-hidden rounded-[3rem] border-0 ring-1 ring-slate-900/10 bg-slate-950 p-10 text-white md:p-12 shadow-2xl shadow-slate-900/40">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-fuchsia-500/20 mix-blend-overlay pointer-events-none" />
+          
+          <div className="relative z-10">
+            <Link
+              to="/"
+              className="mb-8 inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white transition-colors border border-white/10 px-4 py-2 rounded-full"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Bosh sahifaga
+            </Link>
 
-          <div className="relative space-y-6">
-            <Badge className="bg-white text-slate-950 hover:bg-white">Auth</Badge>
-            <h1 className="max-w-xl text-4xl leading-tight font-semibold md:text-5xl">
-              Login va register bitta oynada, minimal oq-qora uslubda.
-            </h1>
-            <p className="max-w-md text-slate-300">
-              Chap tarafdagi ko'zchalar sichqonchani kuzatadi. O'ng tarafda Zod
-              validatsiya bilan forma ishlaydi.
-            </p>
-          </div>
+            <div className="space-y-6 mt-6">
+              <div className="inline-flex items-center gap-2 rounded-full border-0 bg-white px-4 py-1.5 text-[10px] font-black tracking-widest uppercase text-slate-900 shadow-sm">
+                <Sparkles className="w-3 h-3 text-indigo-500" />
+                Soha Lideri
+              </div>
+              <h1 className="max-w-xl text-5xl leading-tight font-extrabold md:text-6xl tracking-tight drop-shadow-sm">
+                Barcha imkoniyatlar <br /> bitta joyda.
+              </h1>
+              <p className="max-w-md text-lg text-slate-300 font-medium leading-relaxed">
+                Platformaga qo'shiling va haqiqiy potensialingizni oching. Interfaol kuzatuvchi sizni kutmoqda.
+              </p>
+            </div>
 
-          <div className="relative mt-10 flex items-center justify-center rounded-2xl border border-white/20 bg-white/5 p-10">
-            <div className="absolute -left-8 -top-8 h-24 w-24 rounded-full border border-white/20" />
-            <div className="absolute -right-6 -bottom-6 h-20 w-20 rounded-full border border-white/20" />
-            <div className="grid grid-cols-2 gap-8">
-              {[0, 1].map((index) => (
-                <div
-                  key={index}
-                  className="flex h-24 w-24 items-center justify-center rounded-full border border-white/30 bg-white/10"
-                >
-                  <div className="relative h-14 w-14 rounded-full bg-white">
-                    <span
-                      className="absolute h-5 w-5 rounded-full bg-slate-950 transition-transform duration-75"
-                      style={{
-                        left: `calc(50% - 10px + ${eyeOffset.x}px)`,
-                        top: `calc(50% - 10px + ${eyeOffset.y}px)`,
-                      }}
-                    />
+            <div className="relative mt-16 flex items-center justify-center rounded-[2.5rem] border border-white/10 bg-white/5 p-12 backdrop-blur-md">
+              <div className="absolute -left-8 -top-8 h-32 w-32 rounded-full border border-white/10 mix-blend-overlay" />
+              <div className="absolute -right-6 -bottom-6 h-24 w-24 rounded-full border border-white/10 mix-blend-overlay" />
+              <div className="grid grid-cols-2 gap-10 relative z-10">
+                {[0, 1].map((index) => (
+                  <div
+                    key={index}
+                    className="flex h-32 w-32 items-center justify-center rounded-full border border-white/20 bg-white/10 shadow-inner"
+                  >
+                    <div className="relative h-20 w-20 rounded-full bg-white shadow-lg overflow-hidden">
+                       <div className="absolute inset-0 shadow-inner rounded-full pointer-events-none" />
+                      <span
+                        className="absolute h-8 w-8 rounded-full bg-indigo-600 transition-transform duration-75 shadow-inner"
+                        style={{
+                          left: `calc(50% - 16px + ${eyeOffset.x}px)`,
+                          top: `calc(50% - 16px + ${eyeOffset.y}px)`,
+                        }}
+                      >
+                         <span className="absolute top-2 left-2 w-2 h-2 rounded-full bg-white/60"></span>
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
-        <Card className="border-slate-900">
-          <CardContent className="space-y-6 pt-8">
-            <div className="flex rounded-lg border border-slate-300 p-1">
+        <Card className="border-0 shadow-xl shadow-slate-200/50 ring-1 ring-slate-100 rounded-[3rem] bg-white overflow-hidden relative self-center">
+          <CardContent className="space-y-8 p-6 md:p-10 relative z-10">
+            <div className="flex rounded-2xl bg-slate-50 p-1.5 ring-1 ring-inset ring-slate-200">
               <button
                 type="button"
                 onClick={() => switchTab("login")}
-                className={
+                className={cn(
+                  "flex-1 rounded-xl px-4 py-3 text-sm font-bold transition-all",
                   tab === "login"
-                    ? "flex-1 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white"
-                    : "flex-1 rounded-md px-3 py-2 text-sm font-medium text-slate-600"
-                }
+                    ? "bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200/50"
+                    : "text-slate-500 hover:text-slate-900"
+                )}
               >
-                Login
+                Kirish
               </button>
               <button
                 type="button"
                 onClick={() => switchTab("register")}
-                className={
+                 className={cn(
+                  "flex-1 rounded-xl px-4 py-3 text-sm font-bold transition-all",
                   tab === "register"
-                    ? "flex-1 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white"
-                    : "flex-1 rounded-md px-3 py-2 text-sm font-medium text-slate-600"
-                }
+                    ? "bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200/50"
+                    : "text-slate-500 hover:text-slate-900"
+                )}
               >
-                Register
+                Ro'yxatdan o'tish
               </button>
             </div>
 
             <div>
-              <h2 className="text-2xl font-semibold">{formTitle}</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Demo account: `user@example.com` / `123456`.
+              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">{formTitle}</h2>
+              <p className="mt-2 text-sm font-medium text-slate-500">
+                Bu umumiy auth qismi. Email va parol kerak.
               </p>
             </div>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="space-y-5" onSubmit={handleSubmit}>
               {tab === "register" ? (
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="auth-firstname">Ism</Label>
+                     <Label htmlFor="auth-firstname" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Ism</Label>
                     <Input
                       id="auth-firstname"
                       value={form.firstName}
                       onChange={updateField("firstName")}
-                      className="h-11"
+                      className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-indigo-500 font-medium px-4"
                       autoComplete="given-name"
                       disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="auth-lastname">Familiya</Label>
+                     <Label htmlFor="auth-lastname" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Familiya</Label>
                     <Input
                       id="auth-lastname"
                       value={form.lastName}
                       onChange={updateField("lastName")}
-                      className="h-11"
+                       className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-indigo-500 font-medium px-4"
                       autoComplete="family-name"
                       disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="auth-phone">Telefon</Label>
+                     <Label htmlFor="auth-phone" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Telefon</Label>
                     <Input
                       id="auth-phone"
                       value={form.phone}
                       onChange={updateField("phone")}
-                      className="h-11"
+                       className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-indigo-500 font-medium px-4"
                       autoComplete="tel"
                       disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="auth-profession">Kasb</Label>
+                    <Label htmlFor="auth-profession" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Kasb</Label>
                     <Input
                       id="auth-profession"
                       value={form.profession}
                       onChange={updateField("profession")}
-                      className="h-11"
+                       className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-indigo-500 font-medium px-4"
                       disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="auth-address">Yashash manzili</Label>
+                     <Label htmlFor="auth-address" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Yashash manzili</Label>
                     <Input
                       id="auth-address"
                       value={form.address}
                       onChange={updateField("address")}
-                      className="h-11"
+                       className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-indigo-500 font-medium px-4"
                       autoComplete="street-address"
                       disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="auth-region">Viloyat</Label>
+                     <Label htmlFor="auth-region" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Viloyat</Label>
                     <Input
                       id="auth-region"
                       value={form.region}
                       onChange={updateField("region")}
-                      className="h-11"
+                       className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-indigo-500 font-medium px-4"
                       disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="auth-city">Shahar</Label>
+                    <Label htmlFor="auth-city" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Shahar</Label>
                     <Input
                       id="auth-city"
                       value={form.city}
                       onChange={updateField("city")}
-                      className="h-11"
+                       className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-indigo-500 font-medium px-4"
                       disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="auth-district">Tuman</Label>
+                    <Label htmlFor="auth-district" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Tuman</Label>
                     <Input
                       id="auth-district"
                       value={form.district}
                       onChange={updateField("district")}
-                      className="h-11"
+                       className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-indigo-500 font-medium px-4"
                       disabled={isLoading}
                     />
                   </div>
@@ -396,27 +408,27 @@ export default function AuthPage() {
               ) : null}
 
               <div className="space-y-2">
-                <Label htmlFor="auth-email">Email</Label>
+                <Label htmlFor="auth-email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Email</Label>
                 <Input
                   id="auth-email"
                   type="email"
                   value={form.email}
                   onChange={updateField("email")}
-                  className="h-11"
+                  className="h-14 rounded-2xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-indigo-500 font-medium px-5"
                   autoComplete="email"
                   disabled={isLoading}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="auth-password">Parol</Label>
+                <Label htmlFor="auth-password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Parol</Label>
                 <div className="relative">
                   <Input
                     id="auth-password"
                     type={showPassword ? "text" : "password"}
                     value={form.password}
                     onChange={updateField("password")}
-                    className="h-11 pr-12"
+                    className="h-14 rounded-2xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-indigo-500 font-medium px-5 pr-12"
                     autoComplete={
                       tab === "login" ? "current-password" : "new-password"
                     }
@@ -425,12 +437,12 @@ export default function AuthPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center text-slate-500"
+                    className="absolute inset-y-0 right-2 inline-flex w-10 items-center justify-center text-slate-400 hover:text-slate-600 focus:outline-none"
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
+                      <EyeOff className="h-5 w-5" />
                     ) : (
-                      <Eye className="h-4 w-4" />
+                      <Eye className="h-5 w-5" />
                     )}
                   </button>
                 </div>
@@ -438,46 +450,48 @@ export default function AuthPage() {
 
               {tab === "register" ? (
                 <div className="space-y-2">
-                  <Label htmlFor="auth-confirm-password">Parolni tasdiqlang</Label>
+                  <Label htmlFor="auth-confirm-password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Parolni tasdiqlang</Label>
                   <Input
                     id="auth-confirm-password"
                     type={showPassword ? "text" : "password"}
                     value={form.confirmPassword}
                     onChange={updateField("confirmPassword")}
-                    className="h-11"
+                    className="h-14 rounded-2xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-indigo-500 font-medium px-5"
                     autoComplete="new-password"
                     disabled={isLoading}
                   />
                 </div>
               ) : null}
 
-              <Button type="submit" className="h-11 w-full" disabled={isLoading}>
-                {isLoading
-                  ? "Yuborilmoqda..."
-                  : tab === "login"
-                    ? "Kirish"
-                    : "Ro'yxatdan o'tish"}
-              </Button>
+              <div className="pt-2">
+                <Button type="submit" className="h-14 w-full rounded-2xl font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl shadow-indigo-600/20 text-base" disabled={isLoading}>
+                  {isLoading
+                    ? "Yuborilmoqda..."
+                    : tab === "login"
+                      ? "Kirish"
+                      : "Ro'yxatdan o'tish"}
+                </Button>
+              </div>
             </form>
 
-            <div className="space-y-2">
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100">
               <Button
                 variant="outline"
-                className="h-11 w-full"
+                className="h-12 flex-1 rounded-xl bg-white border-0 ring-1 ring-slate-200 font-bold text-slate-600 shadow-sm hover:shadow-md hover:ring-slate-300 transition-all"
                 onClick={() => handleSocialLogin("Github")}
                 type="button"
               >
-                <AtSign className="h-4 w-4" />
-                Github bilan kirish
+                <AtSign className="h-4 w-4 mr-2" />
+                Github
               </Button>
               <Button
                 variant="outline"
-                className="h-11 w-full"
+                className="h-12 flex-1 rounded-xl bg-white border-0 ring-1 ring-slate-200 font-bold text-slate-600 shadow-sm hover:shadow-md hover:ring-slate-300 transition-all"
                 onClick={() => handleSocialLogin("Google")}
                 type="button"
               >
-                <Globe className="h-4 w-4" />
-                Google bilan kirish
+                <Globe className="h-4 w-4 mr-2" />
+                Google
               </Button>
             </div>
           </CardContent>
