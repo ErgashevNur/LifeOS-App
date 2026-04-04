@@ -15,34 +15,49 @@
 
 html {
   scroll-behavior: smooth;
+  height: 100%;
 }
 
 body {
   margin: 0;
   padding: 0;
   font-family: var(--font-sans);
+  min-height: 100%;
+  background-color: #f8fafc; /* Slate 50 */
 }
 
 ::selection {
-  background-color: #000;
+  background-color: #0f172a;
   color: #fff;
 }
 
 /* Custom Scrollbar for sleek aesthetic */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f8fafc; /* Slate 50 */
+  background: #f1f5f9; /* Slate 100 */
 }
 
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1; /* Slate 300 */
-  border-radius: 4px;
+  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8; /* Slate 400 */
+}
+
+/* Glassmorphism helpers for Light Mode */
+.glass-light {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.shadow-premium {
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
 }

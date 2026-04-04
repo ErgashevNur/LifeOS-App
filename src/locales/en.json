@@ -1,0 +1,171 @@
+{
+  "common": {
+    "login": "Login",
+    "register": "Register",
+    "getStarted": "Get Started",
+    "loading": "Loading...",
+    "tayyormisiz": "Are you ready?",
+    "footerRights": "All rights reserved."
+  },
+  "hero": {
+    "badge": "Personal OS System",
+    "title1": "Manage your time,",
+    "title2": "Change your life.",
+    "description": "LifeOS is more than just an app. It's your life operating system that combines your goals, habits, and knowledge.",
+    "stats": {
+      "goals": "Goals",
+      "productivity": "Productivity"
+    }
+  },
+  "stats": {
+    "users": "users",
+    "goals": "goals",
+    "streaks": "streak days"
+  },
+  "features": {
+    "header": "Features",
+    "title": "Built from perfect components.",
+    "items": {
+      "Goal": {
+        "title": "Goals",
+        "description": "Track goals from annual to daily in one place."
+      },
+      "AI": {
+        "title": "Artificial Intelligence",
+        "description": "Get precise advice through your personal productivity coach."
+      },
+      "Habits": {
+        "title": "Habits",
+        "description": "40-day habit coach and streak monitoring."
+      },
+      "Gamification": {
+        "title": "Gamification",
+        "description": "Boost motivation with coins, challenges, and rewards."
+      },
+      "Books": {
+        "title": "Books",
+        "description": "Work with reading progress, notes, and ratings."
+      },
+      "Analytics": {
+        "title": "Analytics",
+        "description": "Analyze your progress through detailed charts."
+      }
+    }
+  },
+  "founders": {
+    "header": "Team",
+    "title": "Founders.",
+    "motto": "Time is the most valuable asset.",
+    "roles": {
+      "dev": "Developer",
+      "design": "UI/UX & Data Science"
+    },
+    "descriptions": {
+      "founder1": "Unites frontend and backend to build LifeOS on a fast, clean, and scalable architecture.",
+      "founder2": "Adapts the interface to user habits and uses data insights to power product decisions."
+    }
+  },
+  "dashboard": {
+    "catalog": {
+      "header": "Catalog"
+    },
+    "oracle": {
+      "header": "LifeOS Oracle",
+      "description": "Your AI-powered strategic advisory for the day.",
+      "advice": {
+        "high": "You are performing at peak efficiency. Focus on high-impact strategic tasks.",
+        "low": "Energy management is key today. Tackle smaller tasks and recharge."
+      }
+    },
+    "goals_center": {
+      "header": "Life Goals",
+      "subtitle": "Plan your future starting today.",
+      "placeholder": "Add a new strategic goal...",
+      "add": "Plan Goal"
+    },
+    "community_pulse": {
+      "header": "Community Pulse",
+      "subtitle": "What problems are others solving today?",
+      "comment_placeholder": "Share a helpful tip or comment...",
+      "post": "Post"
+    },
+    "finance": {
+      "header": "Financial Center",
+      "wealth": "Wealth Score",
+      "debt": "Debt Payoff",
+      "savings": "Savings"
+    },
+    "metrics": {
+      "productivity": "Efficiency",
+      "streaks": "Streaks",
+      "focus": "Focus Hours",
+      "goals": "Goals",
+      "balance": "Life Balance",
+      "wealth": "Wealth Score"
+    },
+    "tasks": {
+      "header": "Daily Tasks",
+      "completed": "completed",
+      "placeholder": "Add a new task...",
+      "add": "Add",
+      "done": "Done",
+      "active": "Active"
+    },
+    "tracking": {
+      "header": "Tracking Center",
+      "goals": "Goals",
+      "habits": "Habits",
+      "completed": "completed"
+    }
+  },
+  "auth": {
+    "login": "Sign In",
+    "register": "Sign Up",
+    "hero_badge": "Industry Leader",
+    "hero_title": "All possibilities \nin one place.",
+    "hero_desc": "Join the platform and unlock your true potential. Our interactive assistant is waiting for you.",
+    "back_to_home": "Home",
+    "form_hint": "This is a generic auth section. Email and password required.",
+    "labels": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "phone": "Phone",
+      "profession": "Profession",
+      "address": "Address",
+      "region": "Region",
+      "city": "City",
+      "district": "District",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm Password"
+    },
+    "buttons": {
+      "login": "Login",
+      "register": "Register",
+      "loading": "Sending..."
+    },
+    "messages": {
+      "login_success": "Login successful",
+      "login_redirect": "Redirecting to Dashboard.",
+      "register_success": "Registration successful",
+      "register_redirect": "Profile created and logged in.",
+      "social_hint": "will be enabled soon."
+    }
+  },
+  "welcome": {
+    "badge": "Registration Successful",
+    "title": "Welcome \nto LifeOS World!",
+    "desc": "Your new lifestyle operating system is ready. Let's set your first goal.",
+    "steps": {
+      "profile": {
+        "title": "Profile Ready",
+        "desc": "All your information is safely stored."
+      },
+      "dashboard": {
+        "title": "Dashboard Open",
+        "desc": "All metrics and charts are waiting for you."
+      }
+    },
+    "button": "Go to Dashboard"
+  }
+}

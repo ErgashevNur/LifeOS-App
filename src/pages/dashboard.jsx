@@ -1,240 +1,213 @@
+import React, { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  ArrowRight, 
+  CheckCircle2, 
+  Circle, 
+  Plus, 
+  Target, 
+  Flame, 
+  Clock, 
+  PieChart,
+  Layout,
+  MessageSquare,
+  Send,
+  Zap,
+  TrendingUp,
+  Wallet
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useLifeOSData } from "@/lib/lifeos-store";
 import { cn } from "@/lib/utils";
-import { ArrowRight, CheckCircle2, Circle, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 
-function ProgressBar({ value }) {
+function BentoCard({ children, className, title, subtitle, icon: Icon }) {
   return (
-    <div className="h-3 rounded-full bg-slate-100/80 overflow-hidden">
-      <div className="h-3 rounded-full bg-slate-900 transition-all duration-1000 ease-out" style={{ width: `${value}%` }} />
+    <div className={cn("bg-white rounded-[2.5rem] p-8 shadow-premium ring-1 ring-slate-100 hover:ring-indigo-500/10 transition-all", className)}>
+      {(title || Icon) && (
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            {title && <h3 className="text-xl font-black tracking-tight text-slate-900">{title}</h3>}
+            {subtitle && <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{subtitle}</p>}
+          </div>
+          {Icon && (
+            <div className="p-3 bg-slate-50 rounded-2xl text-slate-900 group-hover:scale-110 transition-transform">
+              <Icon className="w-5 h-5" />
+            </div>
+          )}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+function StatCard({ label, value, icon: Icon, color }) {
+  return (
+    <div className="bg-white rounded-[2rem] p-8 shadow-premium ring-1 ring-slate-100 group">
+      <div className="flex items-center justify-between">
+        <div className={cn("p-3 rounded-2xl", color)}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <TrendingUp className="w-4 h-4 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+      <div className="mt-8">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{label}</p>
+        <p className="mt-2 text-4xl font-black tracking-tighter text-slate-900 group-hover:translate-x-1 transition-transform">{value}</p>
+      </div>
     </div>
   );
 }
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const { data, actions, selectors, dashboardSummary } = useLifeOSData();
-  const [activeTab, setActiveTab] = useState("goals");
-  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newGoal, setNewGoal] = useState("");
+  const [newComment, setNewComment] = useState("");
+  const [comments, setComments] = useState([
+    { id: 1, user: "Asadbek", text: "Maqsadlarga yetish uchun reja eng muhimi!", time: "2m ago" },
+    { id: 2, user: "Muhammad", text: "LifeOS'dagi moliya markazi juda foydali bo'libdi.", time: "10m ago" }
+  ]);
 
-  const completedTasks = useMemo(
-    () => data.dashboard.tasks.filter((task) => task.done).length,
-    [data.dashboard.tasks],
-  );
-
-  const streakScore = selectors.highestStreak;
-  const quickModules = data.content.dashboard.quickModules;
-  const hasServerSummary =
-    dashboardSummary.goalsCount > 0 ||
-    dashboardSummary.habitsCount > 0 ||
-    dashboardSummary.booksCount > 0 ||
-    dashboardSummary.focusHours > 0 ||
-    dashboardSummary.streak > 0 ||
-    dashboardSummary.completedHabits > 0;
-  const metrics = hasServerSummary
-    ? dashboardSummary
-    : {
-        goalsCompletion: selectors.goalCompletionRate,
-        streak: selectors.highestStreak,
-        focusHours: selectors.focusHours,
-        goalsCount: data.goals.length,
-      };
-  const quote =
-    metrics.goalsCompletion >= 70
-      ? "Natija intizomdan keladi. Shu tempni ushlab turing."
-      : "Har kuni 1% yaxshilanish ham yil yakunida katta farq beradi.";
+  const handleAddComment = () => {
+    if (newComment.trim()) {
+      setComments([{ id: Date.now(), user: "Siz", text: newComment, time: "Hozir" }, ...comments]);
+      setNewComment("");
+    }
+  };
 
   return (
-    <div className="grid gap-8 xl:grid-cols-[1fr_320px]">
-      <div className="space-y-8">
-        <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-          <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-[2rem] overflow-hidden group hover:-translate-y-1 transition-all duration-300">
-            <CardContent className="p-8">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Samaradorlik</p>
-              <p className="mt-4 text-4xl md:text-5xl font-extrabold tracking-tighter text-slate-900 group-hover:text-indigo-600 transition-colors">{metrics.goalsCompletion}%</p>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-[2rem] overflow-hidden group hover:-translate-y-1 transition-all duration-300">
-            <CardContent className="p-8">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Streaklar</p>
-              <p className="mt-4 text-4xl md:text-5xl font-extrabold tracking-tighter text-slate-900 group-hover:text-indigo-600 transition-colors">{metrics.streak ?? streakScore}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-[2rem] overflow-hidden group hover:-translate-y-1 transition-all duration-300">
-            <CardContent className="p-8">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fokus soatlar</p>
-              <p className="mt-4 text-4xl md:text-5xl font-extrabold tracking-tighter text-slate-900 group-hover:text-indigo-600 transition-colors">{metrics.focusHours}h</p>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-[2rem] overflow-hidden group hover:-translate-y-1 transition-all duration-300">
-            <CardContent className="p-8">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Maqsadlar</p>
-              <p className="mt-4 text-4xl md:text-5xl font-extrabold tracking-tighter text-slate-900 group-hover:text-indigo-600 transition-colors">{metrics.goalsCount}</p>
-            </CardContent>
-          </Card>
-        </section>
-
-        <Card className="border-0 bg-slate-950 text-white rounded-[2rem] shadow-2xl shadow-slate-900/20 overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-fuchsia-500/20 mix-blend-overlay pointer-events-none" />
-          <CardContent className="p-8 sm:p-10 relative z-10">
-            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Motivatsion iqtibos</p>
-            <p className="mt-4 text-2xl lg:text-3xl font-bold tracking-tight leading-relaxed">"{quote}"</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-[2.5rem] overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between px-8 pt-8 pb-4">
-            <CardTitle className="text-2xl font-extrabold tracking-tight">Kunlik vazifalar</CardTitle>
-            <Badge variant="secondary" className="rounded-full px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest border-0">
-              {completedTasks}/{data.dashboard.tasks.length} bajarildi
+    <div className="space-y-12">
+      {/* Strategic Goals Header */}
+      <div className="grid gap-8 lg:grid-cols-3">
+        <BentoCard className="lg:col-span-2 bg-slate-900 text-white ring-slate-800 shadow-2xl shadow-slate-900/20">
+          <div className="space-y-6">
+            <Badge className="bg-indigo-500 text-white px-4 py-1.5 rounded-full font-black text-[9px] uppercase tracking-widest border-0">
+              STRATEGIK REJA
             </Badge>
-          </CardHeader>
-          <CardContent className="space-y-6 px-8 pb-8">
-            <div className="flex gap-3">
-              <Input
-                value={newTaskTitle}
-                onChange={(event) => setNewTaskTitle(event.target.value)}
-                placeholder="Yangi task qo'shing..."
-                className="h-14 rounded-2xl bg-slate-50 border-0 ring-1 ring-slate-200 px-6 font-medium focus-visible:ring-2 focus-visible:ring-indigo-500 transition-all shadow-inner"
+            <h2 className="text-4xl lg:text-5xl font-black tracking-tighter leading-tight">
+              {t('dashboard.goals_center.header')}
+            </h2>
+            <p className="text-xl text-slate-400 font-medium max-w-lg">
+              {t('dashboard.goals_center.subtitle')}
+            </p>
+            
+            <div className="flex gap-4 mt-8">
+              <Input 
+                value={newGoal}
+                onChange={(e) => setNewGoal(e.target.value)}
+                placeholder={t('dashboard.goals_center.placeholder')}
+                className="h-16 rounded-2xl bg-white/5 border-white/10 text-white placeholder:text-slate-600 px-6 focus-visible:ring-indigo-500"
               />
-              <Button
-                className="h-14 rounded-2xl px-8 font-bold bg-slate-900 hover:bg-slate-800 text-white transition-transform hover:-translate-y-0.5 group"
+              <Button 
                 onClick={() => {
-                  actions.addDashboardTask(newTaskTitle);
-                  setNewTaskTitle("");
+                  if (newGoal.trim()) {
+                    actions.addGoal({ title: newGoal, category: 'Personal', targetDate: new Date().toISOString() });
+                    setNewGoal("");
+                  }
                 }}
+                className="h-16 px-8 rounded-2xl bg-white text-slate-950 font-black uppercase text-xs tracking-widest hover:bg-indigo-500 hover:text-white transition-all shadow-xl"
               >
-                <Plus className="h-5 w-5 mr-2 transition-transform group-hover:rotate-90" />
-                Qo'shish
+                {t('dashboard.goals_center.add')}
               </Button>
             </div>
+          </div>
+        </BentoCard>
 
-            <div className="space-y-3">
+        <BentoCard icon={Wallet} title={t('dashboard.finance.header')}>
+          <div className="mt-4 space-y-6">
+            <div>
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{t('dashboard.finance.wealth')}</p>
+              <p className="text-5xl font-black tracking-tighter text-slate-900 mt-2">92%</p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-end text-[10px] font-black uppercase text-slate-500">
+                <span>{t('dashboard.finance.debt')}</span>
+                <span>$1,200 Left</span>
+              </div>
+              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full w-[70%] bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.3)]" />
+              </div>
+            </div>
+          </div>
+        </BentoCard>
+      </div>
+
+      {/* Stats Quick View */}
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label={t('dashboard.metrics.productivity')} value="88%" icon={Zap} color="bg-indigo-50 text-indigo-600" />
+        <StatCard label={t('dashboard.metrics.streaks')} value={dashboardSummary.streak} icon={Flame} color="bg-orange-50 text-orange-600" />
+        <StatCard label={t('dashboard.metrics.focus')} value="6.4h" icon={Clock} color="bg-cyan-50 text-cyan-600" />
+        <StatCard label={t('dashboard.metrics.goals')} value={dashboardSummary.goalsCount} icon={Target} color="bg-emerald-50 text-emerald-600" />
+      </div>
+
+      {/* Bottom Area: Tasks & Community Pulse */}
+      <div className="grid gap-8 xl:grid-cols-[1fr_420px]">
+        <BentoCard icon={Layout} title={t('dashboard.tasks.header')} subtitle={t('dashboard.tasks.completed')}>
+          <div className="space-y-4">
+            <AnimatePresence mode="popLayout">
               {data.dashboard.tasks.map((task) => (
-                <button
+                <motion.div
                   key={task.id}
-                  type="button"
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-4 p-5 rounded-3xl bg-slate-50 border border-slate-100 group hover:ring-1 hover:ring-indigo-500/20 transition-all cursor-pointer"
                   onClick={() => actions.toggleDashboardTask(task.id)}
-                  className="flex w-full items-center justify-between rounded-2xl bg-white hover:bg-slate-50 transition-colors px-6 py-5 text-left group border-0 ring-1 ring-slate-100 shadow-sm hover:shadow-md"
                 >
-                  <div className="flex items-center gap-4">
-                    {task.done ? (
-                      <div className="rounded-full bg-indigo-100 p-1">
-                        <CheckCircle2 className="h-5 w-5 text-indigo-500 drop-shadow-sm" />
-                      </div>
-                    ) : (
-                      <div className="rounded-full bg-slate-100 p-1 group-hover:bg-slate-200 transition-colors">
-                        <Circle className="h-5 w-5 text-slate-400 group-hover:text-slate-500" />
-                      </div>
-                    )}
-                    <span className={cn("text-lg font-bold tracking-tight transition-all", task.done ? "text-slate-400 line-through" : "text-slate-900")}>
-                      {task.title}
-                    </span>
+                  <div className={cn(
+                    "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
+                    task.done ? "bg-slate-900 border-slate-900" : "border-slate-300"
+                  )}>
+                    {task.done && <CheckCircle2 className="h-4 w-4 text-white" />}
                   </div>
-                  <Badge variant={task.done ? "outline" : "default"} className={cn("rounded-full px-3 py-1 font-black tracking-widest text-[9px] uppercase transition-colors shadow-none border-0", task.done ? "bg-slate-100 text-slate-400" : "")}>
-                    {task.done ? "Done" : "Active"}
-                  </Badge>
-                </button>
+                  <span className={cn("text-lg font-bold tracking-tight", task.done ? "text-slate-400 line-through" : "text-slate-900")}>
+                    {task.title}
+                  </span>
+                </motion.div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
+            </AnimatePresence>
+          </div>
+        </BentoCard>
 
-        <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-[2.5rem] overflow-hidden">
-          <CardHeader className="flex flex-col sm:flex-row items-baseline sm:items-center justify-between px-8 pt-8 pb-6 gap-4">
-            <CardTitle className="text-2xl font-extrabold tracking-tight">Kuzatuv markazi</CardTitle>
-            <div className="flex rounded-[1.25rem] bg-slate-100/80 p-1.5 w-full sm:w-auto shadow-inner">
-              <button
-                type="button"
-                onClick={() => setActiveTab("goals")}
-                className={cn(
-                  "rounded-xl px-8 py-2.5 text-sm font-bold tracking-wide transition-all flex-1 sm:flex-none",
-                  activeTab === "goals"
-                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5"
-                    : "text-slate-500 hover:text-slate-900"
-                )}
-              >
-                Maqsadlar
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("habits")}
-                className={cn(
-                  "rounded-xl px-8 py-2.5 text-sm font-bold tracking-wide transition-all flex-1 sm:flex-none",
-                  activeTab === "habits"
-                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5"
-                    : "text-slate-500 hover:text-slate-900"
-                )}
-              >
-                Odatlar
-              </button>
-            </div>
-          </CardHeader>
-
-          {activeTab === "goals" ? (
-            <CardContent className="space-y-4 px-8 pb-8">
-              {selectors.goalsWithMeta.slice(0, 4).map((goal) => (
-                <div key={goal.id} className="space-y-4 rounded-2xl bg-white ring-1 ring-slate-100 shadow-sm p-6 group hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="text-lg font-bold tracking-tight">{goal.title}</p>
-                    <Badge variant="outline" className="rounded-full px-3 text-[10px] uppercase font-black tracking-widest border-0 bg-slate-50 text-slate-500">{goal.period}</Badge>
+        {/* Community Pulse (Comments Section) */}
+        <BentoCard icon={MessageSquare} title={t('dashboard.community_pulse.header')} subtitle={t('dashboard.community_pulse.subtitle')}>
+          <div className="flex flex-col h-[400px]">
+            <div className="flex-1 overflow-y-auto space-y-6 no-scrollbar pr-2 mb-6">
+              {comments.map((comment) => (
+                <div key={comment.id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase text-indigo-600">{comment.user}</span>
+                    <span className="text-[10px] font-bold text-slate-400">{comment.time}</span>
                   </div>
-                  <ProgressBar value={goal.progress} />
-                  <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
-                    <p className="text-indigo-500">{goal.progress}% yakunlandi</p>
-                    <p>{goal.status}</p>
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                    <p className="text-sm font-bold text-slate-700 leading-relaxed">{comment.text}</p>
                   </div>
                 </div>
               ))}
-            </CardContent>
-          ) : (
-            <CardContent className="space-y-3 px-8 pb-8">
-              {data.habits.slice(0, 4).map((habit) => (
-                <button
-                  key={habit.id}
-                  type="button"
-                  onClick={() => actions.toggleHabitCheckIn(habit.id)}
-                  className="flex w-full items-center justify-between rounded-2xl bg-white hover:bg-slate-50 ring-1 ring-slate-100 shadow-sm px-6 py-5 text-left transition-all hover:shadow-md border-0 group"
-                >
-                  <div>
-                    <p className="text-lg font-bold tracking-tight">{habit.title}</p>
-                    <p className="mt-1 text-xs font-semibold tracking-widest text-slate-400 uppercase">
-                      {habit.streak} kun <span className="opacity-50">/</span> Top {habit.longestStreak}
-                    </p>
-                  </div>
-                  <Badge variant={habit.completedToday ? "default" : "outline"} className={cn("rounded-full px-4 py-1.5 font-black uppercase tracking-widest text-[9px] shadow-none", habit.completedToday ? "bg-emerald-500" : "border-0 bg-slate-100 text-slate-500")}>
-                    {habit.completedToday ? "Bajarilgan" : "Check-in"}
-                  </Badge>
-                </button>
-              ))}
-            </CardContent>
-          )}
-        </Card>
-      </div>
-
-      <aside className="space-y-6">
-        <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-[2.5rem] overflow-hidden sticky top-8">
-          <CardHeader className="px-8 pt-8 pb-4">
-            <CardTitle className="text-xl font-extrabold tracking-tight">Katalog</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 px-8 pb-8">
-            {quickModules.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="flex items-center justify-between rounded-2xl bg-slate-50/50 hover:bg-slate-100 hover:-translate-y-0.5 transition-all px-5 py-4 text-[0.95rem] font-bold tracking-tight group"
+            </div>
+            
+            <div className="relative">
+              <Input
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder={t('dashboard.community_pulse.comment_placeholder')}
+                className="h-14 rounded-2xl bg-slate-100 border-0 px-6 pr-14 font-bold text-sm focus-visible:ring-indigo-500"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
+              />
+              <button 
+                onClick={handleAddComment}
+                className="absolute right-2 top-2 h-10 w-10 bg-slate-900 text-white rounded-xl flex items-center justify-center hover:scale-105 transition-transform"
               >
-                {item.title}
-                <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-slate-900 group-hover:translate-x-1 transition-all" />
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
-      </aside>
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </BentoCard>
+      </div>
     </div>
   );
 }

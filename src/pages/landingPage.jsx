@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,8 +18,9 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
-import heroImage from "/step-bystep.png";
+import heroImage from "/hero-v3.png";
 
 const MotionDiv = motion.div;
 
@@ -29,64 +31,6 @@ const ICON_MAP = {
   Trophy,
   BookOpen,
   TrendingUp,
-};
-
-const EMPTY_CONTENT = {
-  heroStats: {
-    goalsCount: "128,400+",
-    productivityGrowth: "+48%",
-  },
-  stats: [
-    { value: "10K+", label: "foydalanuvchi" },
-    { value: "500K+", label: "maqsad" },
-    { value: "1M+", label: "streak kun" },
-  ],
-  features: [
-    {
-      title: "Goal",
-      description: "Yillikdan kunlikgacha maqsadlarni bir joyda kuzating.",
-      icon: "Target",
-    },
-    {
-      title: "AI",
-      description: "Shaxsiy produktivlik kouchi orqali aniq tavsiyalar oling.",
-      icon: "Brain",
-    },
-    {
-      title: "Habits",
-      description: "40 kunlik odat murabbiyi va streak nazorati.",
-      icon: "Zap",
-    },
-    {
-      title: "Gamification",
-      description: "Coin, challenge va mukofot tizimi bilan motivatsiyani oshiring.",
-      icon: "Trophy",
-    },
-    {
-      title: "Books",
-      description: "O'qish progressi, izoh va reytinglar bilan ishlang.",
-      icon: "BookOpen",
-    },
-    {
-      title: "Analytics",
-      description: "Jarayonni grafiklar orqali tahlil qilib boring.",
-      icon: "TrendingUp",
-    },
-  ],
-  founders: [
-    {
-      name: "Ergashev MuhammadNurulloh",
-      role: "Dasturchi",
-      image: "/founder1.jpg",
-      description: "Frontend va backend qismlarini birlashtirib, LifeOS'ni tez, toza va kengaytirishga qulay arxitekturada quradi.",
-    },
-    {
-      name: "Rahimov Asadbek",
-      role: "UI/UX va Data Science",
-      image: "/founder2.jpg",
-      description: "Interfeys tajribasini foydalanuvchi odatlariga moslaydi, ma'lumotlardan insight olib mahsulot qarorlarini kuchaytiradi.",
-    },
-  ],
 };
 
 const INTRO_HOLD_DELAY_MS = 1450;
@@ -148,13 +92,12 @@ const DEFAULT_MODULE_STYLE = {
 };
 
 export default function LandingPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { toast } = useToast();
   const logoRef = useRef(null);
   const introTextRef = useRef(null);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [content, setContent] = useState(EMPTY_CONTENT);
+  const [content, setContent] = useState(null);
   const [showIntro, setShowIntro] = useState(true);
   const [isIntroMoving, setIsIntroMoving] = useState(false);
   const [introTargetTransform, setIntroTargetTransform] = useState({
@@ -225,13 +168,13 @@ export default function LandingPage() {
         if (!active) {
           return;
         }
-        setContent(payload?.landing ?? EMPTY_CONTENT);
+        setContent(payload?.landing ?? null);
       })
       .catch(() => {
         if (!active) {
           return;
         }
-        setContent(EMPTY_CONTENT);
+        setContent(null);
       });
 
     return () => {
@@ -239,24 +182,7 @@ export default function LandingPage() {
     };
   }, []);
 
-  const handleSignup = async (event) => {
-    event.preventDefault();
 
-    if (!email || !password) {
-      toast({
-        variant: "destructive",
-        title: "Xatolik",
-        description: "Email va parolni kiriting.",
-      });
-      return;
-    }
-
-    toast({
-      title: "Ro'yxatdan o'tish bo'limiga o'tildi",
-      description: "To'liq ma'lumotlarni kiriting va akkaunt yarating.",
-    });
-    navigate(`/auth?tab=register&email=${encodeURIComponent(email.trim())}`);
-  };
 
   return (
     <div className="min-h-screen bg-white text-slate-950">
@@ -347,12 +273,15 @@ export default function LandingPage() {
           <p ref={logoRef} className="text-2xl font-bold tracking-tighter text-slate-900 select-none cursor-pointer">
             LifeOS<span className="text-indigo-500"></span>
           </p>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            <LanguageSwitcher />
+            <div className="h-6 w-[1px] bg-slate-200 mx-1" />
             <Link to="/auth?tab=login">
-              <Button variant="ghost" className="rounded-full px-6 font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100/50">Login</Button>
+
+              <Button variant="ghost" className="rounded-full px-6 font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100/50">{t('common.login')}</Button>
             </Link>
             <Link to="/auth?tab=register">
-              <Button className="rounded-full px-7 font-medium shadow-md shadow-slate-900/10 transition-all hover:shadow-lg hover:-translate-y-0.5">Get Started</Button>
+              <Button className="rounded-full px-7 font-medium shadow-md shadow-slate-900/10 transition-all hover:shadow-lg hover:-translate-y-0.5">{t('common.getStarted')}</Button>
             </Link>
           </div>
         </div>
@@ -368,9 +297,9 @@ export default function LandingPage() {
               transition={{ duration: 0.6, ease: "easeOut" }}
             >
               <h1 className="text-5xl font-extrabold tracking-[-0.04em] text-slate-900 md:text-7xl lg:text-[5.5rem] leading-[1.05]">
-                Hayotingizni <br />
+                {t('hero.title1')} <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-cyan-400">
-                  tartibga soling.
+                  {t('hero.title2')}
                 </span>
               </h1>
             </MotionDiv>
@@ -380,7 +309,7 @@ export default function LandingPage() {
               transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
             >
               <p className="max-w-xl text-lg text-slate-500 md:text-xl md:leading-relaxed font-light">
-                Maqsadlar, odatlar, murakkab AI tahlillarni bitta sokin tizimda boshqaring va o'zingizni kashf eting.
+                {t('hero.description')}
               </p>
             </MotionDiv>
             <MotionDiv 
@@ -391,13 +320,13 @@ export default function LandingPage() {
             >
               <Link to="/auth?tab=register">
                 <Button size="lg" className="rounded-full h-14 px-8 text-base font-medium shadow-xl shadow-slate-900/10 hover:shadow-slate-900/20 transition-all hover:-translate-y-0.5">
-                  Boshlash
+                  {t('common.getStarted')}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
               <Link to="/dashboard">
                 <Button size="lg" variant="outline" className="rounded-full h-14 px-8 text-base font-medium border-slate-200 hover:bg-slate-50 transition-all">
-                  Dashboard ko'rish
+                  Dashboard
                 </Button>
               </Link>
             </MotionDiv>
@@ -429,9 +358,9 @@ export default function LandingPage() {
               </div>
               <div>
                 <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
-                  Bajarilgan maqsadlar
+                  {t('hero.stats.goals')}
                 </p>
-                <p className="text-lg font-bold text-slate-950">{content.heroStats?.goalsCount || "128,400+"}</p>
+                <p className="text-lg font-bold text-slate-950">{content?.heroStats?.goalsCount || "128,400+"}</p>
               </div>
             </MotionDiv>
             <MotionDiv
@@ -445,11 +374,10 @@ export default function LandingPage() {
               </div>
               <div>
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-                  Samaradorlik
+                  {t('hero.stats.productivity')}
                 </p>
                 <div className="flex items-end gap-1.5">
-                  <p className="text-lg font-bold text-white">{content.heroStats?.productivityGrowth || "+48%"}</p>
-                  <p className="text-xs font-medium text-emerald-400 mb-[3px]">o'sish</p>
+                  <p className="text-lg font-bold text-white">{content?.heroStats?.productivityGrowth || "+48%"}</p>
                 </div>
               </div>
             </MotionDiv>
@@ -459,7 +387,11 @@ export default function LandingPage() {
 
       <section className="py-20 bg-slate-50/50 border-b border-white">
         <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 px-6 md:grid-cols-3 lg:px-8">
-          {content.stats.map((item, i) => (
+          {(content?.stats || [
+            { value: "10K+", label: t('stats.users') },
+            { value: "500K+", label: t('stats.goals') },
+            { value: "1M+", label: t('stats.streaks') },
+          ]).map((item, i) => (
             <MotionDiv key={item.label} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1, duration: 0.6 }} viewport={{ once: true }}>
               <div className="flex flex-col items-center justify-center p-12 rounded-[2.5rem] bg-white shadow-xl shadow-slate-200/40 ring-1 ring-slate-900/5 transition-transform duration-500 hover:-translate-y-2">
                 <p className="text-5xl lg:text-7xl font-extrabold tracking-tighter text-slate-900">{item.value}</p>
@@ -474,19 +406,28 @@ export default function LandingPage() {
         <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_bottom_left,_rgba(99,102,241,0.03),_transparent_40%)]" />
         <div className="mx-auto w-full max-w-7xl px-6 lg:px-8 relative z-10">
           <div className="mb-20 max-w-2xl">
-            <p className="text-xs font-black tracking-[0.25em] text-indigo-500 uppercase mb-4">Xususiyatlar</p>
+            <p className="text-xs font-black tracking-[0.25em] text-indigo-500 uppercase mb-4">{t('features.header')}</p>
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.1]">
-              Mukammal qismlardan <br /><span className="text-slate-400">tashkil topgan.</span>
+              {t('features.title')}
             </h2>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {content.features.map((feature, idx) => {
+            {(content?.features || [
+              { icon: "Target", id: "Goal" },
+              { icon: "Brain", id: "AI" },
+              { icon: "Zap", id: "Habits" },
+              { icon: "Trophy", id: "Gamification" },
+              { icon: "BookOpen", id: "Books" },
+              { icon: "TrendingUp", id: "Analytics" },
+            ]).map((feature, idx) => {
               const Icon = ICON_MAP[feature.icon] ?? Sparkles;
               const styles = MODULE_STYLES[feature.icon] || DEFAULT_MODULE_STYLE;
+              const translatedTitle = t(`features.items.${feature.id || feature.title}.title`);
+              const translatedDesc = t(`features.items.${feature.id || feature.title}.description`);
 
               return (
                 <MotionDiv
-                  key={feature.title}
+                  key={feature.id || feature.title}
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-50px" }}
@@ -495,27 +436,12 @@ export default function LandingPage() {
                 >
                   <Card className={`relative h-full overflow-hidden border-slate-200/80 bg-white/70 backdrop-blur-xl transition-all duration-500 hover:-translate-y-2 ${styles.border} ${styles.glow}`}>
                     
-                    {/* Animated Aurora Blobs */}
-                    <div className="pointer-events-none absolute -inset-1 opacity-0 mix-blend-multiply transition-opacity duration-700 group-hover:opacity-100">
-                      <div className={`absolute -left-10 -top-10 h-[180px] w-[180px] animate-pulse rounded-full blur-[50px] ${styles.blob1}`} style={{ animationDuration: '3s' }} />
-                      <div className={`absolute -bottom-10 -right-10 h-[180px] w-[180px] animate-pulse rounded-full blur-[50px] ${styles.blob2}`} style={{ animationDuration: '4s', animationDelay: '1s' }} />
-                    </div>
-
-                    {/* Dotted Grid Background */}
-                    <div
-                      className="pointer-events-none absolute inset-0 z-0 opacity-0 transition-opacity duration-500 group-hover:opacity-[0.04]"
-                      style={{
-                        backgroundImage: `radial-gradient(circle at 1px 1px, black 2px, transparent 0)`,
-                        backgroundSize: "24px 24px",
-                      }}
-                    />
-
                     <CardContent className="relative z-10 space-y-4 pt-8 pb-8 px-6">
                       <div className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl shadow-sm transition-all duration-500 group-hover:scale-110 group-hover:-rotate-6 ${styles.bg}`}>
                         <Icon className="h-7 w-7" />
                       </div>
-                      <p className="text-2xl font-bold tracking-tight text-slate-900 transition-colors duration-300">{feature.title}</p>
-                      <p className="text-[1.05rem] text-slate-600 leading-relaxed transition-colors duration-300 group-hover:text-slate-800">{feature.description}</p>
+                      <p className="text-2xl font-bold tracking-tight text-slate-900 transition-colors duration-300">{translatedTitle}</p>
+                      <p className="text-[1.05rem] text-slate-600 leading-relaxed transition-colors duration-300 group-hover:text-slate-800">{translatedDesc}</p>
                     </CardContent>
                   </Card>
                 </MotionDiv>
@@ -529,28 +455,43 @@ export default function LandingPage() {
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
         <div className="mx-auto w-full max-w-7xl px-6 lg:px-8 relative z-10">
           <div className="mb-20">
-            <p className="text-xs font-black tracking-[0.25em] text-indigo-400 uppercase mb-4">Jamoa</p>
-            <h2 className="text-5xl md:text-7xl font-extrabold tracking-tighter">Asoschilar.</h2>
+            <p className="text-xs font-black tracking-[0.25em] text-indigo-400 uppercase mb-4">{t('founders.header')}</p>
+            <h2 className="text-5xl md:text-7xl font-extrabold tracking-tighter">{t('founders.title')}</h2>
           </div>
-          <div className="grid gap-8 md:grid-cols-2">
-            {content.founders.map((founder, i) => (
-              <MotionDiv key={founder.name} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i*0.1, duration: 0.8, ease: "easeOut" }} viewport={{ once: true }}>
-                <Card className="overflow-hidden border-0 bg-slate-900/50 backdrop-blur-md rounded-[2.5rem] text-white ring-1 ring-white/10">
-                  <CardContent className="grid gap-0 p-0 md:grid-cols-[240px_1fr]">
-                    <div className="relative h-full min-h-[300px] w-full group overflow-hidden">
-                      <div className="absolute inset-0 bg-black/20 z-10 group-hover:bg-transparent transition-all duration-700 pointer-events-none" />
-                      <img
-                        src={founder.image}
-                        alt={founder.name}
-                        className="absolute inset-0 h-full w-full object-cover grayscale-[0.8] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700"
-                      />
+          <div className="grid gap-12 md:grid-cols-2 auto-rows-fr items-stretch">
+            {(content?.founders || [
+              { id: "founder1", image: "/founder1.jpg" },
+              { id: "founder2", image: "/founder2.jpg" },
+            ]).map((founder, i) => (
+              <MotionDiv key={founder.id} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i*0.1, duration: 0.8, ease: "easeOut" }} viewport={{ once: true }} className="flex">
+                <Card className="w-full overflow-hidden border-0 bg-slate-900/40 backdrop-blur-xl rounded-[3rem] text-white ring-1 ring-white/10 flex flex-col h-full shadow-2xl transition-all duration-500 hover:ring-indigo-500/30">
+                  {/* Top: Names */}
+                  <div className="p-10 pb-6 space-y-4">
+                    <h3 className="text-3xl lg:text-4xl font-extrabold tracking-tight leading-tight">
+                      <span className="block text-sm lg:text-base font-bold text-white/50 uppercase tracking-[0.3em] mb-2">{founder.id === 'founder1' ? "Ergashev" : "Rahimov"}</span>
+                      <span className="block">{founder.id === 'founder1' ? "MuhammadNurulloh" : "Asadbek"}</span>
+                    </h3>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-4 py-1 text-[10px] font-black tracking-widest uppercase text-indigo-400">
+                      {t(`founders.roles.${founder.id === 'founder1' ? 'dev' : 'design'}`)}
                     </div>
-                    <div className="space-y-4 p-8 lg:p-12 flex flex-col justify-center">
-                      <h3 className="text-3xl lg:text-4xl font-bold tracking-tight">{founder.name}</h3>
-                      <p className="text-xs font-black tracking-[0.2em] uppercase text-indigo-400">{founder.role}</p>
-                      <p className="text-slate-400 leading-relaxed pt-2">{founder.description}</p>
-                    </div>
-                  </CardContent>
+                  </div>
+
+                  {/* Middle: Image */}
+                  <div className="relative aspect-[3/4] max-w-[400px] mx-auto w-full group overflow-hidden bg-slate-800 rounded-2xl shadow-inner">
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 to-transparent z-10 pointer-events-none" />
+                    <img
+                      src={founder.image}
+                      alt={t(`founders.names.${founder.id}`)}
+                      className="absolute inset-0 h-full w-full object-cover object-top grayscale-[0.3] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-1000"
+                    />
+                  </div>
+
+                  {/* Bottom: Description */}
+                  <div className="p-10 pt-8 flex-1 flex flex-col justify-end bg-gradient-to-b from-transparent to-black/20">
+                    <p className="text-slate-300 leading-relaxed text-sm lg:text-lg font-medium italic border-l-2 border-indigo-500/40 pl-6 py-2">
+                       "{t(`founders.descriptions.${founder.id}`)}"
+                    </p>
+                  </div>
                 </Card>
               </MotionDiv>
             ))}
@@ -558,59 +499,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-24 bg-white relative">
-        <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-slate-100/50 to-transparent pointer-events-none" />
-        <div className="mx-auto w-full max-w-lg px-6 lg:px-8 relative z-10">
-          <Card className="border-0 shadow-2xl shadow-indigo-900/5 bg-slate-50/80 backdrop-blur-3xl rounded-[2rem]">
-            <CardContent className="space-y-6 pt-10 px-8 pb-10">
-              <div className="text-center">
-                <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Tayyormisiz?</h2>
-                <p className="mt-2 text-sm font-medium text-slate-500">
-                  Email va parol orqali qadam qo'ying.
-                </p>
-              </div>
 
-              <form className="space-y-5" onSubmit={handleSignup}>
-                <div className="space-y-2">
-                  <Label htmlFor="home-email" className="font-bold text-[10px] uppercase tracking-[0.2em] text-slate-400">Email</Label>
-                  <Input
-                    id="home-email"
-                    type="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    className="h-14 rounded-2xl bg-white border-0 shadow-sm ring-1 ring-inset ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 transition-shadow"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="home-password" className="font-bold text-[10px] uppercase tracking-[0.2em] text-slate-400">Parol</Label>
-                  <Input
-                    id="home-password"
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className="h-14 rounded-2xl bg-white border-0 shadow-sm ring-1 ring-inset ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 transition-shadow"
-                  />
-                </div>
-                <Button type="submit" className="h-14 w-full rounded-2xl font-bold bg-slate-900 hover:bg-slate-800 text-white mt-4 shadow-xl shadow-slate-900/10 transition-all hover:-translate-y-0.5 group">
-                  Ro'yxatdan o'tish
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </form>
-
-              <p className="rounded-2xl border border-transparent bg-slate-200/50 p-4 text-xs font-medium text-slate-500 text-center">
-                Vaqtingizni qadrlovchi eng so'nggi tizim.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
 
       <footer className="border-t border-slate-100 bg-white py-12">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-6 lg:px-8 text-sm font-medium text-slate-400">
           <p className="inline-flex items-center text-slate-900 font-extrabold tracking-tighter select-none cursor-default text-lg">
-            LifeOS<span className="text-indigo-500">.</span>
+            LifeOS<span className="text-indigo-500"></span>
           </p>
-          <p>© 2026 LifeOS. Barcha huquqlar himoyalangan.</p>
+          <p>© 2026 LifeOS. {t('common.footerRights')}</p>
         </div>
       </footer>
     </div>

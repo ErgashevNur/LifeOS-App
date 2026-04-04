@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 // Lazy loaded pages for performance optimization (Code Splitting)
 const LandingPage = lazy(() => import("./pages/landingPage.jsx"));
 const AuthPage = lazy(() => import("./pages/auth-page.jsx"));
+const WelcomePage = lazy(() => import("./pages/welcome-page.jsx"));
 const DashboardPage = lazy(() => import("./pages/dashboard.jsx"));
 const AssistantPage = lazy(() => import("./pages/assistant-page.jsx"));
 const AiAssistantPage = lazy(() => import("./pages/ai-assistant-page.jsx"));
@@ -21,6 +22,8 @@ const NetworkingPage = lazy(() => import("./pages/networking-page.jsx"));
 const AnalyticsPage = lazy(() => import("./pages/analytics-page.jsx"));
 const SettingsPage = lazy(() => import("./pages/settings-page.jsx"));
 const UsersPage = lazy(() => import("./pages/users-page.jsx"));
+const FinancialCenterPage = lazy(() => import("./pages/financial-center.jsx"));
+const CommunityPulsePage = lazy(() => import("./pages/community-pulse.jsx"));
 const NotFoundPage = lazy(() => import("./pages/not-found-page.jsx"));
 const ErrorPage = lazy(() => import("./pages/error-page.jsx"));
 
@@ -52,6 +55,14 @@ const router = createBrowserRouter([
         element: (
           <Suspense fallback={<PageLoader />}>
             <AuthPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "welcome",
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <WelcomePage />
           </Suspense>
         ),
       },
@@ -135,6 +146,22 @@ const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoader />}>
                 <NetworkingPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "finance",
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <FinancialCenterPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "community",
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <CommunityPulsePage />
               </Suspense>
             ),
           },
