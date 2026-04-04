@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { isAuthenticated, registerUser, saveAuthSession } from "@/lib/auth";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Rocket } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -72,59 +72,61 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950 px-4 py-8 text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_#1e293b,_transparent_42%),radial-gradient(circle_at_bottom,_#0f172a,_transparent_55%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,_rgba(255,255,255,0.09)_1px,_transparent_1px),linear-gradient(to_bottom,_rgba(255,255,255,0.09)_1px,_transparent_1px)] bg-[size:52px_52px] opacity-35" />
+    <div className="relative min-h-screen overflow-hidden bg-slate-950 px-4 py-8 text-white flex items-center justify-center">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_#312e81,_transparent_40%),radial-gradient(circle_at_bottom_left,_#020617,_transparent_60%)]" />
 
-      <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl flex-col justify-center gap-10 lg:flex-row lg:items-center lg:justify-between">
-        <section className="max-w-xl space-y-6">
+      <div className="relative mx-auto flex w-full max-w-6xl flex-col justify-center gap-10 lg:flex-row lg:items-center lg:justify-between z-10">
+        <section className="max-w-xl space-y-8">
           <Button
             variant="ghost"
-            className="h-auto p-0 text-sm text-white hover:bg-transparent hover:text-white hover:underline"
+            className="h-auto p-0 text-sm hover:bg-transparent hover:underline text-slate-400 hover:text-white transition-colors"
             type="button"
             onClick={() => navigate("/")}
           >
-            <ArrowLeft className="h-4 w-4" />
-            Orqaga
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Bosh sahifaga
           </Button>
-          <div className="inline-flex rounded-full border border-white px-3 py-1 text-xs font-medium tracking-[0.2em] uppercase">
-            REGISTER
+          
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 rounded-full border-0 ring-1 ring-white/10 bg-white/5 backdrop-blur-md px-4 py-1.5 text-[10px] font-black tracking-widest uppercase text-slate-300 shadow-sm">
+              <Rocket className="w-3 h-3 text-indigo-400" />
+              Yangi Platforma
+            </div>
+            <h1 className="text-5xl leading-tight font-extrabold md:text-6xl tracking-tight text-white drop-shadow-sm">
+              Yangi Hayotni <br className="hidden lg:block"/> Boshlang.
+            </h1>
+            <p className="max-w-md text-lg font-medium text-slate-400 leading-relaxed">
+              O'z maqsadlaringizga erishing, sog'ligingizni nazorat qiling va jamoa toping.
+            </p>
           </div>
-          <h1 className="text-4xl leading-tight font-bold md:text-5xl">
-            Yangi akkaunt yarating
-          </h1>
-          <p className="max-w-lg text-base text-slate-300 md:text-lg">
-            Qisqa form orqali ro&apos;yxatdan o&apos;ting. Dizayn minimal, fokus
-            faqat kerakli maydonlarda.
-          </p>
         </section>
 
-        <Card className="w-full max-w-md border-white bg-white text-slate-950 shadow-[10px_10px_0_0_rgba(255,255,255,0.9)]">
-          <CardContent className="space-y-6 pt-8">
+        <Card className="w-full max-w-md border-0 bg-slate-900/40 backdrop-blur-3xl shadow-2xl shadow-black/80 ring-1 ring-white/10 rounded-[2.5rem] overflow-hidden text-white">
+          <CardContent className="space-y-8 p-6 md:p-10">
             <div>
-              <h2 className="text-2xl font-semibold">Create account</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Ma&apos;lumotlaringizni kiriting va davom eting.
+              <h2 className="text-3xl font-extrabold tracking-tight text-white">Ro'yxatdan o'tish</h2>
+              <p className="mt-2 text-sm font-medium text-slate-400">
+                Profilingizni yarating.
               </p>
             </div>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-2">
-                <Label htmlFor="register-name">Ism</Label>
+                <Label htmlFor="register-name" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">F.I.Sh</Label>
                 <Input
                   id="register-name"
                   type="text"
-                  placeholder="F.I.Sh"
+                  placeholder="Ism va Familiya"
                   autoComplete="name"
                   value={fullName}
                   onChange={(event) => setFullName(event.target.value)}
                   disabled={isLoading}
-                  className="h-11 border-slate-900/50 focus-visible:ring-slate-900/30"
+                  className="h-14 rounded-2xl border-0 ring-1 ring-inset ring-white/10 bg-white/5 focus-visible:ring-2 focus-visible:ring-indigo-500 px-5 font-medium placeholder:text-slate-500 text-white transition-all"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="register-email">Email</Label>
+                <Label htmlFor="register-email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Email</Label>
                 <Input
                   id="register-email"
                   type="email"
@@ -133,12 +135,12 @@ export default function RegisterPage() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   disabled={isLoading}
-                  className="h-11 border-slate-900/50 focus-visible:ring-slate-900/30"
+                 className="h-14 rounded-2xl border-0 ring-1 ring-inset ring-white/10 bg-white/5 focus-visible:ring-2 focus-visible:ring-indigo-500 px-5 font-medium placeholder:text-slate-500 text-white transition-all"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="register-password">Parol</Label>
+                <Label htmlFor="register-password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Parol</Label>
                 <Input
                   id="register-password"
                   type="password"
@@ -146,12 +148,12 @@ export default function RegisterPage() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   disabled={isLoading}
-                  className="h-11 border-slate-900/50 focus-visible:ring-slate-900/30"
+                 className="h-14 rounded-2xl border-0 ring-1 ring-inset ring-white/10 bg-white/5 focus-visible:ring-2 focus-visible:ring-indigo-500 px-5 font-medium placeholder:text-slate-500 text-white transition-all"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="register-confirm-password">
+                <Label htmlFor="register-confirm-password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">
                   Parolni tasdiqlang
                 </Label>
                 <Input
@@ -161,35 +163,39 @@ export default function RegisterPage() {
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   disabled={isLoading}
-                  className="h-11 border-slate-900/50 focus-visible:ring-slate-900/30"
+                  className="h-14 rounded-2xl border-0 ring-1 ring-inset ring-white/10 bg-white/5 focus-visible:ring-2 focus-visible:ring-indigo-500 px-5 font-medium placeholder:text-slate-500 text-white transition-all"
                 />
               </div>
 
-              <Button
-                type="submit"
-                className="h-11 w-full rounded-md bg-slate-950 text-white hover:bg-slate-800"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Yaratilmoqda...
-                  </>
-                ) : (
-                  "Ro'yxatdan o'tish"
-                )}
-              </Button>
+              <div className="pt-2">
+                <Button
+                  type="submit"
+                  className="h-14 w-full rounded-2xl font-bold text-base bg-indigo-500 hover:bg-indigo-400 text-white shadow-xl shadow-indigo-500/20 py-2.5 transition-transform active:scale-95"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                      Yaratilmoqda...
+                    </>
+                  ) : (
+                    "Ro'yxatdan o'tish"
+                  )}
+                </Button>
+              </div>
             </form>
 
-            <p className="text-center text-sm text-slate-600">
-              Akkauntingiz bormi?{" "}
-              <Link
-                to="/login"
-                className="font-medium text-slate-950 underline"
-              >
-                Kirish
-              </Link>
-            </p>
+            <div className="pt-4 border-t border-white/10">
+              <p className="text-center text-sm font-medium text-slate-400">
+                Akkauntingiz bormi?{" "}
+                <Link
+                  to="/login"
+                  className="font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
+                >
+                  Kirish
+                </Link>
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>

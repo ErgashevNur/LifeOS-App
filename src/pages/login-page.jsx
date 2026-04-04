@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { isAuthenticated, loginUser, saveAuthSession } from "@/lib/auth";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -60,45 +60,47 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-white px-4 py-8 text-slate-950">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_#f1f5f9,_transparent_55%),radial-gradient(circle_at_bottom_right,_#e2e8f0,_transparent_50%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,_#e2e8f0_1px,_transparent_1px),linear-gradient(to_bottom,_#e2e8f0_1px,_transparent_1px)] bg-[size:46px_46px] opacity-35" />
+    <div className="relative min-h-screen overflow-hidden bg-slate-50 px-4 py-8 text-slate-950 flex items-center justify-center">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_#e0e7ff,_transparent_40%),radial-gradient(circle_at_bottom_right,_#fdf4ff,_transparent_40%)]" />
 
-      <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl flex-col justify-center gap-10 lg:flex-row lg:items-center lg:justify-between">
-        <section className="max-w-xl space-y-6">
+      <div className="relative mx-auto flex w-full max-w-6xl flex-col justify-center gap-10 lg:flex-row lg:items-center lg:justify-between z-10">
+        <section className="max-w-xl space-y-8">
           <Button
             variant="ghost"
-            className="h-auto p-0 text-sm hover:bg-transparent hover:underline"
+            className="h-auto p-0 text-sm hover:bg-transparent hover:underline text-slate-500 hover:text-slate-900 transition-colors"
             type="button"
             onClick={() => navigate("/")}
           >
-            <ArrowLeft className="h-4 w-4" />
-            Orqaga
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Bosh sahifaga
           </Button>
-          <div className="inline-flex rounded-full border border-slate-900 px-3 py-1 text-xs font-medium tracking-[0.2em] uppercase">
-            LOGIN
+          
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 rounded-full border-0 ring-1 ring-slate-200 bg-white/50 backdrop-blur-md px-4 py-1.5 text-[10px] font-black tracking-widest uppercase text-slate-600 shadow-sm">
+              <Sparkles className="w-3 h-3 text-indigo-500" />
+              Tizimga kirish
+            </div>
+            <h1 className="text-5xl leading-tight font-extrabold md:text-6xl tracking-tight text-slate-900 drop-shadow-sm">
+              LifeOS'ga <br className="hidden lg:block"/> Xush Kelibsiz.
+            </h1>
+            <p className="max-w-md text-lg font-medium text-slate-500 leading-relaxed">
+              Shaxsiy rivojlanish, rejalashtirish va unumdorlik platformangiz.
+            </p>
           </div>
-          <h1 className="text-4xl leading-tight font-bold md:text-5xl">
-            LifeOS akkauntingizga kiring
-          </h1>
-          <p className="max-w-lg text-base text-slate-600 md:text-lg">
-            Minimal va toza interfeys. Email va parol orqali tizimga kirib ishni
-            davom ettiring.
-          </p>
         </section>
 
-        <Card className="w-full max-w-md border-slate-900 bg-white shadow-[10px_10px_0_0_rgba(15,23,42,0.95)]">
-          <CardContent className="space-y-6 pt-8">
+        <Card className="w-full max-w-md border-0 bg-white/60 backdrop-blur-2xl shadow-2xl shadow-slate-300/50 ring-1 ring-white rounded-[2.5rem] overflow-hidden">
+          <CardContent className="space-y-8 p-6 md:p-10">
             <div>
-              <h2 className="text-2xl font-semibold">Sign in</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Akkauntingizga kirish uchun ma&apos;lumotlarni kiriting.
+              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Kirish</h2>
+              <p className="mt-2 text-sm font-medium text-slate-500">
+                Akkauntingiz ma'lumotlarini kiriting.
               </p>
             </div>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="space-y-5" onSubmit={handleSubmit}>
               <div className="space-y-2">
-                <Label htmlFor="login-email">Email</Label>
+                <Label htmlFor="login-email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Email</Label>
                 <Input
                   id="login-email"
                   type="email"
@@ -107,12 +109,12 @@ export default function LoginPage() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   disabled={isLoading}
-                  className="h-11 border-slate-900/50 focus-visible:ring-slate-900/30"
+                  className="h-14 rounded-2xl border-0 ring-1 ring-inset ring-slate-200 bg-white/80 focus-visible:ring-2 focus-visible:ring-indigo-500 px-5 font-medium shadow-sm transition-all"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="login-password">Parol</Label>
+                <Label htmlFor="login-password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Parol</Label>
                 <Input
                   id="login-password"
                   type="password"
@@ -120,18 +122,18 @@ export default function LoginPage() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   disabled={isLoading}
-                  className="h-11 border-slate-900/50 focus-visible:ring-slate-900/30"
+                  className="h-14 rounded-2xl border-0 ring-1 ring-inset ring-slate-200 bg-white/80 focus-visible:ring-2 focus-visible:ring-indigo-500 px-5 font-medium shadow-sm transition-all"
                 />
               </div>
 
               <Button
                 type="submit"
-                className="h-11 w-full rounded-md bg-slate-950 text-white hover:bg-slate-800"
+                className="h-14 w-full rounded-2xl font-bold text-base bg-slate-900 hover:bg-slate-800 text-white shadow-xl shadow-slate-900/20 transition-transform active:scale-95"
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
                     Kirilmoqda...
                   </>
                 ) : (
@@ -140,12 +142,14 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <p className="text-center text-sm text-slate-600">
-              Akkauntingiz yo&apos;qmi?{" "}
-              <Link to="/register" className="font-medium text-slate-950 underline">
-                Ro&apos;yxatdan o&apos;tish
-              </Link>
-            </p>
+            <div className="pt-4 border-t border-slate-200/60">
+              <p className="text-center text-sm font-medium text-slate-500">
+                Akkauntingiz yo'qmi?{" "}
+                <Link to="/register" className="font-bold text-indigo-600 hover:text-indigo-500 transition-colors">
+                  Ro'yxatdan o'tish
+                </Link>
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>

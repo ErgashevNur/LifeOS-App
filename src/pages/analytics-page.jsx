@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLifeOSData } from "@/lib/lifeos-store";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, TrendingUp, Activity } from "lucide-react";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -36,39 +36,82 @@ function healthScoreFromLog(log) {
 function StreakLineChart({ points }) {
   if (points.length === 0) {
     return (
-      <div className="flex h-56 w-full items-center justify-center rounded-lg border border-slate-200 bg-white text-sm text-slate-500">
-        Grafik uchun ma&apos;lumot topilmadi.
+      <div className="flex h-64 w-full items-center justify-center rounded-[2rem] border-0 bg-slate-50/50 text-sm font-bold text-slate-400">
+        Grafik uchun ma'lumot yetarli emas
       </div>
     );
   }
 
-  const max = Math.max(...points);
+  const max = Math.max(...points, 10);
   const min = Math.min(...points);
   const diff = max - min || 1;
   const denominator = points.length > 1 ? points.length - 1 : 1;
 
+  // Enhance points for smooth wave (simple estimation for SVG points)
   const svgPoints = points
     .map((value, index) => {
       const x = points.length > 1 ? (index / denominator) * 100 : 50;
-      const y = 100 - ((value - min) / diff) * 100;
+      const y = 100 - ((value - min) / diff) * 80 - 10; // Add padding top/bottom
       return `${x},${y}`;
     })
     .join(" ");
 
+  const polygonPoints = `0,100 ${svgPoints} 100,100`;
+
   return (
-    <svg
-      viewBox="0 0 100 100"
-      className="h-56 w-full rounded-lg border border-slate-200 bg-white p-2"
-    >
-      <polyline
-        points={svgPoints}
-        fill="none"
-        stroke="#0f172a"
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </svg>
+    <div className="relative h-64 w-full rounded-[2rem] bg-slate-50 overflow-hidden shadow-inner flex items-center p-4">
+      <svg
+        viewBox="0 0 100 100"
+        className="h-full w-full overflow-visible drop-shadow-xl"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#818cf8" />
+            <stop offset="50%" stopColor="#6366f1" />
+            <stop offset="100%" stopColor="#d946ef" />
+          </linearGradient>
+          <linearGradient id="fillGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        
+        <polygon
+          points={polygonPoints}
+          fill="url(#fillGrad)"
+          className="transition-all duration-1000"
+        />
+        <polyline
+          points={svgPoints}
+          fill="none"
+          stroke="url(#lineGrad)"
+          strokeWidth="3"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          className="transition-all duration-1000"
+        />
+        
+        {points.map((value, index) => {
+          const x = points.length > 1 ? (index / denominator) * 100 : 50;
+          const y = 100 - ((value - min) / diff) * 80 - 10;
+          return (
+            <circle
+              key={index}
+              cx={x}
+              cy={y}
+              r="2"
+              fill="white"
+              stroke="#6366f1"
+              strokeWidth="1.5"
+              className="hover:r-3 transition-all cursor-pointer"
+            >
+              <title>{value} ball</title>
+            </circle>
+          );
+        })}
+      </svg>
+    </div>
   );
 }
 
@@ -108,47 +151,67 @@ export default function AnalyticsPage() {
   }, [data.mastery.focusSessions]);
 
   return (
-    <div className="space-y-4">
-      <Button variant="outline" onClick={() => navigate("/dashboard")}>
-        <ArrowLeft className="h-4 w-4" />
-        Dashboard&apos;ga qaytish
-      </Button>
+    <div className="space-y-8 max-w-7xl mx-auto">
+      <div>
+        <Button 
+          variant="outline" 
+          onClick={() => navigate("/dashboard")}
+          className="rounded-2xl h-12 px-6 font-bold shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 border-0 transition-transform active:scale-95"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Orqaga qaytish
+        </Button>
+      </div>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Haftalik bajarilish grafigi</CardTitle>
+      <section className="grid gap-6 xl:grid-cols-2">
+        <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-[2.5rem] bg-white overflow-hidden group">
+          <CardHeader className="px-8 pt-8 pb-6 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl font-extrabold tracking-tight text-slate-900">Salomatlik Ritmi</CardTitle>
+              <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mt-1">Haftalik statistika</p>
+            </div>
+            <div className="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-500 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-300">
+              <Activity className="h-6 w-6" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-7 items-end gap-2 rounded-lg border border-slate-200 p-3">
+          <CardContent className="px-8 pb-8">
+            <div className="grid grid-cols-7 items-end gap-3 sm:gap-4 rounded-[2rem] bg-slate-50 p-6 shadow-inner border-0 ring-1 ring-slate-200/50">
               {weeklyCompletion.map((item) => (
-                <div key={item.day} className="space-y-2 text-center">
-                  <div className="h-44 rounded-md bg-slate-100 p-1">
+                <div key={item.day} className="space-y-3 text-center flex flex-col items-center group/bar">
+                  <div className="h-48 w-full sm:w-12 rounded-full bg-slate-200/50 p-1 flex items-end overflow-hidden shadow-inner relative">
                     <div
-                      className={
+                      className={cn(
+                        "w-full rounded-full transition-all duration-1000 ease-out shadow-md",
                         item.hasData
-                          ? "w-full rounded-sm bg-slate-900"
-                          : "w-full rounded-sm bg-slate-300"
-                      }
+                          ? "bg-gradient-to-t from-indigo-600 to-fuchsia-500 group-hover/bar:brightness-110"
+                          : "bg-gradient-to-t from-slate-300 to-slate-200"
+                      )}
                       style={{
-                        height: `${item.value}%`,
-                        marginTop: `${100 - item.value}%`,
+                        height: `${Math.max(item.value, 8)}%`, 
                       }}
                     />
                   </div>
-                  <p className="text-xs text-slate-500">{item.day}</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover/bar:text-indigo-600 transition-colors">{item.day}</p>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Fokus sessiyalar dinamikasi</CardTitle>
+        <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-[2.5rem] bg-white overflow-hidden group">
+          <CardHeader className="px-8 pt-8 pb-6 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl font-extrabold tracking-tight text-slate-900">Fokus Dinamikasi</CardTitle>
+              <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mt-1">Sessiyalar grafigi</p>
+            </div>
+            <div className="h-12 w-12 rounded-2xl bg-fuchsia-50 flex items-center justify-center text-fuchsia-500 group-hover:scale-110 group-hover:bg-fuchsia-500 group-hover:text-white transition-all duration-300">
+              <TrendingUp className="h-6 w-6" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <StreakLineChart points={streakPoints} />
+          <CardContent className="px-8 pb-8">
+            <div className="rounded-[2rem] p-1 bg-white ring-1 ring-slate-200/50 shadow-sm border-0 group-hover:shadow-md transition-shadow">
+              <StreakLineChart points={streakPoints} />
+            </div>
           </CardContent>
         </Card>
       </section>
