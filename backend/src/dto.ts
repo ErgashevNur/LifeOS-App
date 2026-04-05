@@ -63,14 +63,24 @@ export class RegisterDto {
 }
 
 export class LoginDto {
-  @ApiProperty()
+  @ApiProperty({ example: "muhammadnurullohergashev@gmail.com" })
   @IsEmail()
   email!: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: "12345678" })
   @IsString()
   @MinLength(6)
   password!: string;
+}
+
+export class GoogleAuthDto {
+  @ApiProperty({
+    description: "Google Identity Services'dan keladigan ID token (JWT).",
+    minLength: 20,
+  })
+  @IsString()
+  @MinLength(20)
+  idToken!: string;
 }
 
 export class RefreshTokenDto {

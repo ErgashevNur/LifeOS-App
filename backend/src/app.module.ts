@@ -5,11 +5,13 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { JwtAuthGuard } from "./common/jwt-auth.guard";
 import { ApiResponseInterceptor } from "./common/response.interceptor";
+import { PrismaService } from "./prisma/prisma.service";
 
 @Module({
   imports: [JwtModule.register({})],
   controllers: [AppController],
   providers: [
+    PrismaService,
     AppService,
     {
       provide: APP_GUARD,

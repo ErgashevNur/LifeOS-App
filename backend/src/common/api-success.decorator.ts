@@ -13,22 +13,24 @@ interface ApiSuccessOptions {
   message: string;
   status?: 200 | 201;
   auth?: boolean;
+  dataSchema?: Record<string, unknown>;
 }
 
 export function ApiSuccess({
   message,
   status = 200,
   auth = false,
+  dataSchema,
 }: ApiSuccessOptions) {
   const responseDecorator =
     status === 201
       ? ApiCreatedResponse({
           description: message,
-          schema: successEnvelopeSchema(message),
+          schema: successEnvelopeSchema(message, dataSchema),
         })
       : ApiOkResponse({
           description: message,
-          schema: successEnvelopeSchema(message),
+          schema: successEnvelopeSchema(message, dataSchema),
         });
 
   return applyDecorators(
@@ -38,7 +40,8 @@ export function ApiSuccess({
       description: "So'rov validatsiyadan o'tmadi yoki noto'g'ri formatda.",
     }),
     ApiTooManyRequestsResponse({
-      description: "Rate limit oshib ketdi. Birozdan keyin qayta urinib ko'ring.",
+      description:
+        "Rate limit oshib ketdi. Birozdan keyin qayta urinib ko'ring.",
     }),
     ...(auth
       ? [
@@ -51,7 +54,10 @@ export function ApiSuccess({
   );
 }
 
-function successEnvelopeSchema(message: string) {
+function successEnvelopeSchema(
+  message: string,
+  dataSchema?: Record<string, unknown>,
+) {
   return {
     type: "object",
     properties: {
@@ -64,8 +70,10 @@ function successEnvelopeSchema(message: string) {
         example: message,
       },
       data: {
-        type: "object",
-        additionalProperties: true,
+        ...(dataSchema ?? {
+          type: "object",
+          additionalProperties: true,
+        }),
       },
       timestamp: {
         type: "string",

@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id
+  firstName      String
+  lastName       String
+  fullName       String
+  email          String   @unique
+  phone          String
+  address        String
+  region         String
+  city           String
+  district       String
+  profession     String
+  role           String
+  password       String
+  tokenVersion   Int
+  refreshTokenId String?
+  createdAt      DateTime
+  updatedAt      DateTime @updatedAt
+
+  @@index([role])
+  @@index([createdAt])
+}
+
+model AppState {
+  id        Int      @id @default(1)
+  state     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PublicContent {
+  id        Int      @id @default(1)
+  payload   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DashboardTask {
+  id        String   @id
+  title     String
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
+}
+
+model Goal {
+  id           String   @id
+  title        String
+  period       String
+  targetValue  Int
+  currentValue Int      @default(0)
+  deadline     DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([period])
+}
+
+model Habit {
+  id            String   @id
+  title         String
+  streak        Int      @default(0)
+  longestStreak Int      @default(0)
+  completedDays Int      @default(0)
+  completedToday Boolean @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([createdAt])
+}
+
+model Book {
+  id        String        @id
+  title     String
+  author    String
+  category  String
+  pages     Int
+  readPages Int           @default(0)
+  rating    Int           @default(0)
+  note      String
+  likes     Int           @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  comments  BookComment[]
+
+  @@index([createdAt])
+  @@index([category])
+}
+
+model BookComment {
+  id        BigInt   @id @default(autoincrement())
+  bookId    String
+  text      String
+  createdAt DateTime @default(now())
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([bookId, createdAt])
+}
+
+model HealthOverview {
+  id         Int      @id @default(1)
+  calories   Int      @default(0)
+  waterMl    Int      @default(0)
+  sleepHours Float    @default(0)
+  updatedAt  DateTime @updatedAt
+}
+
+model HealthLog {
+  id         String   @id
+  day        String
+  calories   Int
+  waterMl    Int
+  sleepHours Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([createdAt])
+}
+
+model MasterySkill {
+  id            String         @id
+  name          String
+  hours         Float          @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  focusSessions FocusSession[]
+
+  @@index([createdAt])
+}
+
+model FocusSession {
+  id          String      @id
+  date        DateTime
+  durationMin Int
+  skillId     String
+  createdAt   DateTime    @default(now())
+
+  skill MasterySkill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@index([skillId])
+}
+
+model NetworkPerson {
+  id            Int                 @id
+  name          String
+  username      String
+  job           String
+  skill         String
+  streak        Int
+  mutualFriends Int
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  connections   NetworkConnection[]
+  messages      NetworkMessage[]
+}
+
+model NetworkConnection {
+  id        BigInt      @id @default(autoincrement())
+  personId  Int         @unique
+  createdAt DateTime    @default(now())
+
+  person NetworkPerson @relation(fields: [personId], references: [id], onDelete: Cascade)
+}
+
+model NetworkMessage {
+  id        BigInt      @id @default(autoincrement())
+  personId  Int
+  message   String
+  createdAt DateTime    @default(now())
+
+  person NetworkPerson @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId, createdAt])
+}
+
+model AssistantMessage {
+  id        Int      @id
+  role      String
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model AppSettings {
+  id                     Int      @id @default(1)
+  language               String
+  notifyHabits           Boolean  @default(true)
+  notifyGoals            Boolean  @default(true)
+  notifyAssistant        Boolean  @default(false)
+  integrationCalendar    Boolean  @default(true)
+  integrationSmartwatch  Boolean  @default(false)
+  integrationMobileSync  Boolean  @default(true)
+  updatedAt              DateTime @updatedAt
+}
