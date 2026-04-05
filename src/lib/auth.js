@@ -51,12 +51,19 @@ function parseErrorMessage(
   path = "",
 ) {
   const payloadMessage = extractPayloadMessage(payload);
+  const isGoogleAuth = path.startsWith("/auth/google");
 
   if (status === 400 || status === 422) {
+    if (isGoogleAuth) {
+      return "Google orqali tasdiqlashni hozir yakunlab bo'lmadi. Qayta urinib ko'ring.";
+    }
     return payloadMessage || USER_FRIENDLY_MESSAGES.validation;
   }
 
   if (status === 401) {
+    if (isGoogleAuth) {
+      return payloadMessage || "Google akkaunt tasdiqlanmadi. Qayta urinib ko'ring.";
+    }
     if (path.startsWith("/auth/login") || path.startsWith("/auth/register")) {
       return payloadMessage || "Login yoki parol noto'g'ri.";
     }
@@ -382,6 +389,18 @@ export async function loginUser({ email, password }) {
     const session = await apiRequest("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
+    });
+    return { ok: true, user: session };
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
+}
+
+export async function loginWithGoogle(idToken) {
+  try {
+    const session = await apiRequest("/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ idToken }),
     });
     return { ok: true, user: session };
   } catch (error) {

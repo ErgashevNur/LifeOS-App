@@ -24,6 +24,10 @@ export const DEFAULT_PERSISTED_DATA: PersistedData = {
   state: {
     content: {
       landing: {
+        heroStats: {
+          goalsCount: "128,400+",
+          productivityGrowth: "+48%",
+        },
         stats: [
           { value: "10K+", label: "foydalanuvchi" },
           { value: "500K+", label: "maqsad" },

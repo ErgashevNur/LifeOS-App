@@ -7,10 +7,12 @@ import { useToast } from "@/hooks/use-toast";
 import {
   isAuthenticated,
   loginUser,
+  loginWithGoogle,
   registerUser,
   saveAuthSession,
 } from "@/lib/auth";
-import { ArrowLeft, AtSign, Eye, EyeOff, Globe } from "lucide-react";
+import { GoogleLogin } from "@react-oauth/google";
+import { ArrowLeft, AtSign, Eye, EyeOff } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -55,6 +57,8 @@ function clamp(value, min, max) {
 function tabFromQuery(value) {
   return value === "register" ? "register" : "login";
 }
+
+const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "").trim();
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -127,11 +131,51 @@ export default function AuthPage() {
     setSearchParams({ tab: nextTab });
   };
 
-  const handleSocialLogin = (provider) => {
+  const handleSocialLoginPlaceholder = (provider) => {
     toast({
       title: `${provider} orqali kirish`,
       description: "Bu integratsiya tez orada yoqiladi.",
     });
+  };
+
+  const handleGoogleAuth = async (credentialResponse) => {
+    const idToken =
+      credentialResponse && typeof credentialResponse.credential === "string"
+        ? credentialResponse.credential
+        : "";
+
+    if (!idToken) {
+      toast({
+        variant: "destructive",
+        title: "Google auth xatosi",
+        description: "Google token olinmadi. Qayta urinib ko'ring.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    const result = await loginWithGoogle(idToken);
+    if (!result.ok) {
+      setIsLoading(false);
+      toast({
+        variant: "destructive",
+        title: "Google orqali kirish xatosi",
+        description: result.message,
+      });
+      return;
+    }
+
+    saveAuthSession(result.user);
+    setIsLoading(false);
+    toast({
+      title:
+        tab === "register"
+          ? "Google orqali ro'yxatdan o'tish muvaffaqiyatli"
+          : "Google orqali kirish muvaffaqiyatli",
+      description: "Dashboard sahifasiga yo'naltirilyapsiz.",
+    });
+    navigate("/dashboard", { replace: true });
   };
 
   const handleSubmit = async (event) => {
@@ -464,21 +508,48 @@ export default function AuthPage() {
               <Button
                 variant="outline"
                 className="h-11 w-full"
-                onClick={() => handleSocialLogin("Github")}
+                onClick={() => handleSocialLoginPlaceholder("Github")}
                 type="button"
               >
                 <AtSign className="h-4 w-4" />
                 Github bilan kirish
               </Button>
-              <Button
-                variant="outline"
-                className="h-11 w-full"
-                onClick={() => handleSocialLogin("Google")}
-                type="button"
-              >
-                <Globe className="h-4 w-4" />
-                Google bilan kirish
-              </Button>
+              {GOOGLE_CLIENT_ID ? (
+                <div className="flex h-11 w-full items-center justify-center overflow-hidden rounded-lg border border-slate-300 bg-white">
+                  <GoogleLogin
+                    onSuccess={handleGoogleAuth}
+                    onError={() => {
+                      toast({
+                        variant: "destructive",
+                        title: "Google auth xatosi",
+                        description:
+                          "Google orqali kirishni hozir yakunlab bo'lmadi. Qayta urinib ko'ring.",
+                      });
+                    }}
+                    text={tab === "login" ? "signin_with" : "signup_with"}
+                    theme="outline"
+                    shape="rectangular"
+                    size="large"
+                    width="360"
+                  />
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="h-11 w-full"
+                  onClick={() =>
+                    toast({
+                      variant: "destructive",
+                      title: "Google orqali kirish hozircha mavjud emas",
+                      description:
+                        "Iltimos, birozdan keyin qayta urinib ko'ring.",
+                    })
+                  }
+                  type="button"
+                >
+                  Google bilan davom etish
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

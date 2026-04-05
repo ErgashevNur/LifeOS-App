@@ -132,6 +132,10 @@ export interface AssistantMessage {
 
 export interface AppContent {
   landing: {
+    heroStats: {
+      goalsCount: string;
+      productivityGrowth: string;
+    };
     stats: Array<{
       value: string;
       label: string;

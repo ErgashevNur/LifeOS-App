@@ -22,19 +22,48 @@ const SWAGGER_TAGS: Array<{ name: string; description: string }> = [
     name: "Admin",
     description: "Admin bo'limi: userlar ro'yxati va boshqaruv endpointlari.",
   },
-  { name: "Dashboard", description: "Dashboard statistikasi va tasklar boshqaruvi." },
-  { name: "Goals", description: "Yillik/oylik/haftalik/kunlik maqsadlar CRUD API." },
-  { name: "Habits", description: "40 kunlik odatlar va streak boshqaruvi API." },
-  { name: "Books", description: "Kitoblar, progress, izoh va like endpointlari." },
-  { name: "Health", description: "Kaloriya, suv va uyqu monitoring endpointlari." },
+  {
+    name: "Dashboard",
+    description: "Dashboard statistikasi va tasklar boshqaruvi.",
+  },
+  {
+    name: "Goals",
+    description: "Yillik/oylik/haftalik/kunlik maqsadlar CRUD API.",
+  },
+  {
+    name: "Habits",
+    description: "40 kunlik odatlar va streak boshqaruvi API.",
+  },
+  {
+    name: "Books",
+    description: "Kitoblar, progress, izoh va like endpointlari.",
+  },
+  {
+    name: "Health",
+    description: "Kaloriya, suv va uyqu monitoring endpointlari.",
+  },
   { name: "Mastery", description: "Ko'nikmalar va fokus sessiya API." },
   { name: "Network", description: "Networking ulanish va xabar endpointlari." },
   { name: "Assistant", description: "AI assistant xabarlari endpointlari." },
-  { name: "Settings", description: "Til, bildirishnoma va integratsiya sozlamalari." },
-  { name: "Uploads", description: "Rasm yuklash va statik URL olish endpointi." },
+  {
+    name: "Settings",
+    description: "Til, bildirishnoma va integratsiya sozlamalari.",
+  },
+  {
+    name: "Uploads",
+    description: "Rasm yuklash va statik URL olish endpointi.",
+  },
   { name: "State", description: "To'liq app state va reset endpointlari." },
   { name: "Public", description: "Public kontent endpointlari." },
-  { name: "System", description: "Servis holati va health-check endpointlari." },
+  {
+    name: "Landing",
+    description:
+      "Landing page kontenti va hero widget qiymatlari (heroStats) endpointlari.",
+  },
+  {
+    name: "System",
+    description: "Servis holati va health-check endpointlari.",
+  },
 ];
 
 function parseIntEnv(name: string, fallback: number): number {
@@ -208,7 +237,6 @@ async function bootstrap() {
       "NestJS backend for LifeOS with JWT auth, refresh-token flow, role-based access and image uploads",
     )
     .setVersion("1.0.0")
-    .addServer("/api", "LifeOS API prefix")
     .addBearerAuth(
       {
         type: "http",
