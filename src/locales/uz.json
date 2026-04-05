@@ -1,0 +1,171 @@
+{
+  "common": {
+    "login": "Kirish",
+    "register": "Ro'yxatdan o'tish",
+    "getStarted": "Boshlash",
+    "loading": "Yuklanmoqda...",
+    "tayyormisiz": "Tayyormisiz?",
+    "footerRights": "Barcha huquqlar himoyalangan."
+  },
+  "hero": {
+    "badge": "Shaxsiy OS tizimi",
+    "title1": "Vaqtingizni boshqaring,",
+    "title2": "Hayotingizni o'zgartiring.",
+    "description": "LifeOS - bu shunchaki ilova emas. Bu sizning maqsadlaringiz, odatlaringiz va bilimingizni birlashtirgan hayotiy operatsion tizimingiz.",
+    "stats": {
+      "goals": "Maqsadlar",
+      "productivity": "Samaradorlik"
+    }
+  },
+  "stats": {
+    "users": "foydalanuvchi",
+    "goals": "maqsad",
+    "streaks": "streak kun"
+  },
+  "features": {
+    "header": "Xususiyatlar",
+    "title": "Mukammal qismlardan tashkil topgan.",
+    "items": {
+      "Goal": {
+        "title": "Maqsadlar",
+        "description": "Yillikdan kunlikgacha maqsadlarni bir joyda kuzating."
+      },
+      "AI": {
+        "title": "Sun'iy Intellekt",
+        "description": "Shaxsiy produktivlik kouchi orqali aniq tavsiyalar oling."
+      },
+      "Habits": {
+        "title": "Odatlar",
+        "description": "40 kunlik odat murabbiyi va streak nazorati."
+      },
+      "Gamification": {
+        "title": "Gamifikatsiya",
+        "description": "Coin, challenge va mukofot tizimi bilan motivatsiyani oshiring."
+      },
+      "Books": {
+        "title": "Kitoblar",
+        "description": "O'qish progressi, izoh va reytinglar bilan ishlang."
+      },
+      "Analytics": {
+        "title": "Tahlil",
+        "description": "Jarayonni grafiklar orqali tahlil qilib boring."
+      }
+    }
+  },
+  "founders": {
+    "header": "Jamoa",
+    "title": "Asoschilar.",
+    "motto": "Vaqt eng qimmatli aktivdir.",
+    "roles": {
+      "dev": "Dasturchi",
+      "design": "UI/UX va Data Science"
+    },
+    "descriptions": {
+      "founder1": "Frontend va backend qismlarini birlashtirib, LifeOS'ni tez, toza va kengaytirishga qulay arxitekturada quradi.",
+      "founder2": "Interfeys tajribasini foydalanuvchi odatlariga moslaydi, ma'lumotlardan insight olib mahsulot qarorlarini kuchaytiradi."
+    }
+  },
+  "dashboard": {
+    "catalog": {
+      "header": "Katalog"
+    },
+    "oracle": {
+      "header": "LifeOS Orakuli",
+      "description": "Sizning bugun uchun AI strategik maslahatingiz.",
+      "advice": {
+        "high": "Siz yuqori darajadagi unumdorlikdasiz. Muhim strategik vazifalarga e'tibor bering.",
+        "low": "Bugun energiyani boshqarish muhim. Kichik vazifalarni bajaring va dam oling."
+      }
+    },
+    "goals_center": {
+      "header": "Hayotiy Maqsadlar",
+      "subtitle": "O'z kelajagingizni bugundan rejalashtiring.",
+      "placeholder": "Yangi strategik maqsad qo'shish...",
+      "add": "Rejalashtirish"
+    },
+    "community_pulse": {
+      "header": "Xalq Fikri",
+      "subtitle": "Boshqalar qanday muammolarni yechmoqda?",
+      "comment_placeholder": "Foydali maslahat qoldiring...",
+      "post": "Yuborish"
+    },
+    "finance": {
+      "header": "Moliya Markazi",
+      "wealth": "Boylik Ballari",
+      "debt": "Qarzlarni uzish",
+      "savings": "Jamg'armalar"
+    },
+    "metrics": {
+      "productivity": "Samaradorlik",
+      "streaks": "Streaklar",
+      "focus": "Fokus soatlar",
+      "goals": "Maqsadlar",
+      "balance": "Hayot Balansi",
+      "wealth": "Boylik Ballari"
+    },
+    "tasks": {
+      "header": "Kunlik vazifalar",
+      "completed": "bajarildi",
+      "placeholder": "Yangi task qo'shing...",
+      "add": "Qo'shish",
+      "done": "Bajarildi",
+      "active": "Faol"
+    },
+    "tracking": {
+      "header": "Kuzatuv markazi",
+      "goals": "Maqsadlar",
+      "habits": "Odatlar",
+      "completed": "yakunlandi"
+    }
+  },
+  "auth": {
+    "login": "Akkauntga Kirish",
+    "register": "Ro'yxatdan o'tish",
+    "hero_badge": "Soha Lideri",
+    "hero_title": "Barcha imkoniyatlar \nbitta joyda.",
+    "hero_desc": "Platformaga qo'shiling va haqiqiy potensialingizni oching. Interfaol kuzatuvchi sizni kutmoqda.",
+    "back_to_home": "Bosh sahifa",
+    "form_hint": "Bu umumiy auth qismi. Email va parol kerak.",
+    "labels": {
+      "firstName": "Ism",
+      "lastName": "Familiya",
+      "phone": "Telefon",
+      "profession": "Kasb",
+      "address": "Yashash manzili",
+      "region": "Viloyat",
+      "city": "Shahar",
+      "district": "Tuman",
+      "email": "Email",
+      "password": "Parol",
+      "confirmPassword": "Parolni tasdiqlang"
+    },
+    "buttons": {
+      "login": "Kirish",
+      "register": "Ro'yxatdan o'tish",
+      "loading": "Yuborilmoqda..."
+    },
+    "messages": {
+      "login_success": "Kirish muvaffaqiyatli",
+      "login_redirect": "Dashboard sahifasiga yo'naltirilyapsiz.",
+      "register_success": "Ro'yxatdan o'tish muvaffaqiyatli",
+      "register_redirect": "Profil yaratildi va tizimga kirdingiz.",
+      "social_hint": "tez orada yoqiladi."
+    }
+  },
+  "welcome": {
+    "badge": "Muvaffaqiyatli Ro'yxatdan O'tdingiz",
+    "title": "Xush kelibsiz \nLifeOS Olamiga!",
+    "desc": "Sizning hayotingizni tartibga soluvchi yangi tizim tayyor. Keling, birinchi maqsadni belgilaymiz.",
+    "steps": {
+      "profile": {
+        "title": "Profil Tayyor",
+        "desc": "Sizning barcha ma'lumotlaringiz xavfsiz saqlanmoqda."
+      },
+      "dashboard": {
+        "title": "Dashboard Ochiq",
+        "desc": "Barcha metrikalar va grafiklar sizni kutmoqda."
+      }
+    },
+    "button": "Dashboardga O'tish"
+  }
+}

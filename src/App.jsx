@@ -1,24 +1,40 @@
+import { lazy, Suspense } from "react";
 import { Navigate, createBrowserRouter, RouterProvider } from "react-router-dom";
 import RootLayout from "./layouts/root-layout.jsx";
 import AppLayout from "./layouts/app-layout.jsx";
-import LandingPage from "./pages/landingPage.jsx";
-import AuthPage from "./pages/auth-page.jsx";
-import DashboardPage from "./pages/dashboard.jsx";
-import AssistantPage from "./pages/assistant-page.jsx";
-import AiAssistantPage from "./pages/ai-assistant-page.jsx";
-import BooksPage from "./pages/books-page.jsx";
-import GoalsPage from "./pages/goals-page.jsx";
-import HabitsPage from "./pages/habits-page.jsx";
-import HealthPage from "./pages/health-page.jsx";
-import HealthyLifePage from "./pages/healthy-life-page.jsx";
-import MasteryPage from "./pages/mastery-page.jsx";
-import NetworkPage from "./pages/network-page.jsx";
-import NetworkingPage from "./pages/networking-page.jsx";
-import AnalyticsPage from "./pages/analytics-page.jsx";
-import SettingsPage from "./pages/settings-page.jsx";
-import UsersPage from "./pages/users-page.jsx";
-import NotFoundPage from "./pages/not-found-page.jsx";
-import ErrorPage from "./pages/error-page.jsx";
+import { Loader2 } from "lucide-react";
+
+// Lazy loaded pages for performance optimization (Code Splitting)
+const LandingPage = lazy(() => import("./pages/landingPage.jsx"));
+const AuthPage = lazy(() => import("./pages/auth-page.jsx"));
+const WelcomePage = lazy(() => import("./pages/welcome-page.jsx"));
+const DashboardPage = lazy(() => import("./pages/dashboard.jsx"));
+const AssistantPage = lazy(() => import("./pages/assistant-page.jsx"));
+const AiAssistantPage = lazy(() => import("./pages/ai-assistant-page.jsx"));
+const BooksPage = lazy(() => import("./pages/books-page.jsx"));
+const GoalsPage = lazy(() => import("./pages/goals-page.jsx"));
+const HabitsPage = lazy(() => import("./pages/habits-page.jsx"));
+const HealthPage = lazy(() => import("./pages/health-page.jsx"));
+const HealthyLifePage = lazy(() => import("./pages/healthy-life-page.jsx"));
+const MasteryPage = lazy(() => import("./pages/mastery-page.jsx"));
+const NetworkPage = lazy(() => import("./pages/network-page.jsx"));
+const NetworkingPage = lazy(() => import("./pages/networking-page.jsx"));
+const AnalyticsPage = lazy(() => import("./pages/analytics-page.jsx"));
+const SettingsPage = lazy(() => import("./pages/settings-page.jsx"));
+const UsersPage = lazy(() => import("./pages/users-page.jsx"));
+const FinancialCenterPage = lazy(() => import("./pages/financial-center.jsx"));
+const CommunityPulsePage = lazy(() => import("./pages/community-pulse.jsx"));
+const NotFoundPage = lazy(() => import("./pages/not-found-page.jsx"));
+const ErrorPage = lazy(() => import("./pages/error-page.jsx"));
+
+const PageLoader = () => (
+  <div className="flex h-full w-full min-h-[50vh] items-center justify-center">
+    <div className="flex flex-col items-center gap-4 text-slate-400">
+      <Loader2 className="w-8 h-8 animate-spin text-slate-900" />
+      <p className="text-sm font-bold tracking-widest uppercase">Yuklanmoqda...</p>
+    </div>
+  </div>
+);
 
 const router = createBrowserRouter([
   {
@@ -28,11 +44,27 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <LandingPage />,
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <LandingPage />
+          </Suspense>
+        ),
       },
       {
         path: "auth",
-        element: <AuthPage />,
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <AuthPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "welcome",
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <WelcomePage />
+          </Suspense>
+        ),
       },
       {
         path: "login",
@@ -47,65 +79,141 @@ const router = createBrowserRouter([
         children: [
           {
             path: "dashboard",
-            element: <DashboardPage />,
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <DashboardPage />
+              </Suspense>
+            ),
           },
           {
             path: "books",
-            element: <BooksPage />,
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <BooksPage />
+              </Suspense>
+            ),
           },
           {
             path: "goals",
-            element: <GoalsPage />,
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <GoalsPage />
+              </Suspense>
+            ),
           },
           {
             path: "habits",
-            element: <HabitsPage />,
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <HabitsPage />
+              </Suspense>
+            ),
           },
           {
             path: "healthy-life",
-            element: <HealthyLifePage />,
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <HealthyLifePage />
+              </Suspense>
+            ),
           },
           {
             path: "health",
-            element: <HealthPage />,
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <HealthPage />
+              </Suspense>
+            ),
           },
           {
             path: "mastery",
-            element: <MasteryPage />,
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <MasteryPage />
+              </Suspense>
+            ),
           },
           {
             path: "network",
-            element: <NetworkPage />,
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <NetworkPage />
+              </Suspense>
+            ),
           },
           {
             path: "networking",
-            element: <NetworkingPage />,
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <NetworkingPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "finance",
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <FinancialCenterPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "community",
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <CommunityPulsePage />
+              </Suspense>
+            ),
           },
           {
             path: "ai-assistant",
-            element: <AiAssistantPage />,
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <AiAssistantPage />
+              </Suspense>
+            ),
           },
           {
             path: "assistant",
-            element: <AssistantPage />,
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <AssistantPage />
+              </Suspense>
+            ),
           },
           {
             path: "analytics",
-            element: <AnalyticsPage />,
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <AnalyticsPage />
+              </Suspense>
+            ),
           },
           {
             path: "settings",
-            element: <SettingsPage />,
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <SettingsPage />
+              </Suspense>
+            ),
           },
           {
             path: "users",
-            element: <UsersPage />,
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <UsersPage />
+              </Suspense>
+            ),
           },
         ],
       },
       {
         path: "*",
-        element: <NotFoundPage />,
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <NotFoundPage />
+          </Suspense>
+        ),
       },
     ],
   },

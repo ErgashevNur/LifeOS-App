@@ -373,6 +373,32 @@ export async function apiRequest(path, options = {}, config = {}) {
 }
 
 export async function registerUser(payload) {
+  // Mock success if NO API URL is configured (for demo/development)
+  if (!API_BASE_URL) {
+    const mockUser = {
+      user: {
+        id: "mock-123",
+        email: payload.email,
+        fullName: `${payload.firstName} ${payload.lastName}`,
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        phone: payload.phone,
+        address: payload.address,
+        region: payload.region,
+        city: payload.city,
+        district: payload.district,
+        profession: payload.profession,
+        role: "user",
+        createdAt: new Date().toISOString(),
+      },
+      accessToken: "mock-access-token",
+      refreshToken: "mock-refresh-token"
+    };
+    return new Promise((resolve) => {
+      setTimeout(() => resolve({ ok: true, user: mockUser }), 800);
+    });
+  }
+
   try {
     const session = await apiRequest("/auth/register", {
       method: "POST",
@@ -385,6 +411,24 @@ export async function registerUser(payload) {
 }
 
 export async function loginUser({ email, password }) {
+  // Mock success if NO API URL is configured (for demo/development)
+  if (!API_BASE_URL) {
+    const mockUser = {
+      user: {
+        id: "mock-123",
+        email: email,
+        fullName: "Test User",
+        role: "user",
+        createdAt: new Date().toISOString(),
+      },
+      accessToken: "mock-access-token",
+      refreshToken: "mock-refresh-token"
+    };
+    return new Promise((resolve) => {
+      setTimeout(() => resolve({ ok: true, user: mockUser }), 800);
+    });
+  }
+
   try {
     const session = await apiRequest("/auth/login", {
       method: "POST",
