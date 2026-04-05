@@ -35,6 +35,7 @@ import {
   CreateBookDto,
   CreateGoalDto,
   CreateHabitDto,
+  GoogleAuthDto,
   LoginDto,
   RefreshTokenDto,
   RegisterDto,
@@ -49,10 +50,21 @@ import {
 import { AccessTokenPayload } from "./types";
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+const ALLOWED_UPLOAD_MIME_TYPES: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+  "image/avif": ".avif",
+};
 
-function safeUploadName(originalName: string): string {
-  const ext = path.extname(originalName).toLowerCase();
-  const base = path.basename(originalName, ext);
+function resolveUploadExtension(mimetype: string): string | null {
+  return ALLOWED_UPLOAD_MIME_TYPES[mimetype.toLowerCase()] ?? null;
+}
+
+function safeUploadName(originalName: string, mimetype: string): string {
+  const ext = resolveUploadExtension(mimetype) ?? ".img";
+  const base = path.parse(originalName).name;
   const cleaned =
     base
       .trim()
@@ -63,6 +75,114 @@ function safeUploadName(originalName: string): string {
 
   return `${Date.now()}-${cleaned}-${Math.random().toString(36).slice(2, 8)}${ext}`;
 }
+
+const LANDING_HERO_STATS_SCHEMA = {
+  type: "object",
+  required: ["goalsCount", "productivityGrowth"],
+  properties: {
+    goalsCount: {
+      type: "string",
+      example: "128,400+",
+      description: "Bajarilgan jami maqsadlar ko'rsatkichi.",
+    },
+    productivityGrowth: {
+      type: "string",
+      example: "+48%",
+      description: "Samaradorlik o'sishi foiz ko'rinishida.",
+    },
+  },
+};
+
+const LANDING_CONTENT_SCHEMA = {
+  type: "object",
+  required: ["heroStats", "stats", "features", "founders"],
+  properties: {
+    heroStats: LANDING_HERO_STATS_SCHEMA,
+    stats: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["value", "label"],
+        properties: {
+          value: { type: "string", example: "10K+" },
+          label: { type: "string", example: "foydalanuvchi" },
+        },
+      },
+    },
+    features: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["title", "description", "icon"],
+        properties: {
+          title: { type: "string", example: "Goal" },
+          description: {
+            type: "string",
+            example: "Yillikdan kunlikgacha maqsadlarni bir joyda kuzating.",
+          },
+          icon: { type: "string", example: "Target" },
+        },
+      },
+    },
+    founders: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["name", "role", "image", "description"],
+        properties: {
+          name: { type: "string", example: "Ergashev MuhammadNurulloh" },
+          role: { type: "string", example: "Dasturchi" },
+          image: { type: "string", example: "/founder1.jpg" },
+          description: {
+            type: "string",
+            example:
+              "Frontend va backend qismlarini birlashtirib, LifeOS'ni quradi.",
+          },
+        },
+      },
+    },
+  },
+};
+
+const PUBLIC_CONTENT_SCHEMA = {
+  type: "object",
+  required: [
+    "landing",
+    "dashboard",
+    "assistant",
+    "books",
+    "health",
+    "mastery",
+    "settings",
+  ],
+  properties: {
+    landing: LANDING_CONTENT_SCHEMA,
+    dashboard: {
+      type: "object",
+      additionalProperties: true,
+    },
+    assistant: {
+      type: "object",
+      additionalProperties: true,
+    },
+    books: {
+      type: "object",
+      additionalProperties: true,
+    },
+    health: {
+      type: "object",
+      additionalProperties: true,
+    },
+    mastery: {
+      type: "object",
+      additionalProperties: true,
+    },
+    settings: {
+      type: "object",
+      additionalProperties: true,
+    },
+  },
+};
 
 @Controller()
 export class AppController {
@@ -79,11 +199,34 @@ export class AppController {
 
   @Public()
   @Get("public/content")
-  @ApiTags("Public")
-  @ApiOperation({ summary: "Get public app content for landing and catalogs" })
-  @ApiSuccess({ message: "Public kontent muvaffaqiyatli olindi." })
+  @ApiTags("Public", "Landing")
+  @ApiOperation({
+    summary: "Get public app content for landing and catalogs",
+    description:
+      "Landing page uchun dinamik widget qiymatlari `landing.heroStats` orqali qaytadi.",
+  })
+  @ApiSuccess({
+    message: "Public kontent muvaffaqiyatli olindi.",
+    dataSchema: PUBLIC_CONTENT_SCHEMA,
+  })
   getPublicContent() {
     return this.appService.getPublicContent();
+  }
+
+  @Public()
+  @Get("public/landing")
+  @ApiTags("Landing")
+  @ApiOperation({
+    summary: "Get landing page content (heroStats included)",
+    description:
+      "Landing sahifa hero qismidagi widget qiymatlari `heroStats.goalsCount` va `heroStats.productivityGrowth` maydonlari orqali olinadi.",
+  })
+  @ApiSuccess({
+    message: "Landing page kontenti muvaffaqiyatli olindi.",
+    dataSchema: LANDING_CONTENT_SCHEMA,
+  })
+  getLandingContent() {
+    return this.appService.getLandingContent();
   }
 
   @Get("state")
@@ -123,6 +266,19 @@ export class AppController {
   @ApiSuccess({ message: "Login muvaffaqiyatli bajarildi." })
   login(@Body() dto: LoginDto) {
     return this.appService.login(dto);
+  }
+
+  @Public()
+  @Post("auth/google")
+  @HttpCode(200)
+  @ApiTags("Auth")
+  @ApiOperation({
+    summary:
+      "Login/Register with Google ID token and return access/refresh tokens",
+  })
+  @ApiSuccess({ message: "Google orqali kirish muvaffaqiyatli bajarildi." })
+  googleAuth(@Body() dto: GoogleAuthDto) {
+    return this.appService.authWithGoogle(dto);
   }
 
   @Public()
@@ -473,17 +629,17 @@ export class AppController {
           callback(null, UPLOAD_DIR);
         },
         filename: (_req, file, callback) => {
-          callback(null, safeUploadName(file.originalname));
+          callback(null, safeUploadName(file.originalname, file.mimetype));
         },
       }),
       limits: {
         fileSize: 5 * 1024 * 1024,
       },
       fileFilter: (_req, file, callback) => {
-        if (!file.mimetype.startsWith("image/")) {
+        if (!resolveUploadExtension(file.mimetype)) {
           callback(
             new BadRequestException(
-              "Faqat image/* formatdagi fayllarni yuklash mumkin.",
+              "Faqat JPG, PNG, WEBP, GIF yoki AVIF formatlari qo'llab-quvvatlanadi.",
             ),
             false,
           );

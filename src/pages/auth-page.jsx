@@ -8,13 +8,12 @@ import { useToast } from "@/hooks/use-toast";
 import {
   isAuthenticated,
   loginUser,
+  loginWithGoogle,
   registerUser,
   saveAuthSession,
 } from "@/lib/auth";
-import { cn } from "@/lib/utils";
-import { ArrowLeft, AtSign, Eye, EyeOff, Globe, Sparkles } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useTranslation } from "react-i18next";
+import { GoogleLogin } from "@react-oauth/google";
+import { ArrowLeft, AtSign, Eye, EyeOff } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -59,6 +58,8 @@ function clamp(value, min, max) {
 function tabFromQuery(value) {
   return value === "register" ? "register" : "login";
 }
+
+const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "").trim();
 
 export default function AuthPage() {
   const { t } = useTranslation();
@@ -133,11 +134,51 @@ export default function AuthPage() {
     setSearchParams({ tab: nextTab });
   };
 
-  const handleSocialLogin = (provider) => {
+  const handleSocialLoginPlaceholder = (provider) => {
     toast({
       title: `${provider}`,
       description: `${provider} ${t('auth.messages.social_hint')}`,
     });
+  };
+
+  const handleGoogleAuth = async (credentialResponse) => {
+    const idToken =
+      credentialResponse && typeof credentialResponse.credential === "string"
+        ? credentialResponse.credential
+        : "";
+
+    if (!idToken) {
+      toast({
+        variant: "destructive",
+        title: "Google auth xatosi",
+        description: "Google token olinmadi. Qayta urinib ko'ring.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    const result = await loginWithGoogle(idToken);
+    if (!result.ok) {
+      setIsLoading(false);
+      toast({
+        variant: "destructive",
+        title: "Google orqali kirish xatosi",
+        description: result.message,
+      });
+      return;
+    }
+
+    saveAuthSession(result.user);
+    setIsLoading(false);
+    toast({
+      title:
+        tab === "register"
+          ? "Google orqali ro'yxatdan o'tish muvaffaqiyatli"
+          : "Google orqali kirish muvaffaqiyatli",
+      description: "Dashboard sahifasiga yo'naltirilyapsiz.",
+    });
+    navigate("/dashboard", { replace: true });
   };
 
   const handleSubmit = async (event) => {
@@ -505,22 +546,49 @@ export default function AuthPage() {
             <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100">
               <Button
                 variant="outline"
-                className="h-12 flex-1 rounded-xl bg-white border-0 ring-1 ring-slate-200 font-bold text-slate-600 shadow-sm hover:shadow-md hover:ring-slate-300 transition-all"
-                onClick={() => handleSocialLogin("Github")}
+                className="h-11 w-full"
+                onClick={() => handleSocialLoginPlaceholder("Github")}
                 type="button"
               >
                 <AtSign className="h-4 w-4 mr-2" />
                 Github
               </Button>
-              <Button
-                variant="outline"
-                className="h-12 flex-1 rounded-xl bg-white border-0 ring-1 ring-slate-200 font-bold text-slate-600 shadow-sm hover:shadow-md hover:ring-slate-300 transition-all"
-                onClick={() => handleSocialLogin("Google")}
-                type="button"
-              >
-                <Globe className="h-4 w-4 mr-2" />
-                Google
-              </Button>
+              {GOOGLE_CLIENT_ID ? (
+                <div className="flex h-11 w-full items-center justify-center overflow-hidden rounded-lg border border-slate-300 bg-white">
+                  <GoogleLogin
+                    onSuccess={handleGoogleAuth}
+                    onError={() => {
+                      toast({
+                        variant: "destructive",
+                        title: "Google auth xatosi",
+                        description:
+                          "Google orqali kirishni hozir yakunlab bo'lmadi. Qayta urinib ko'ring.",
+                      });
+                    }}
+                    text={tab === "login" ? "signin_with" : "signup_with"}
+                    theme="outline"
+                    shape="rectangular"
+                    size="large"
+                    width="360"
+                  />
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="h-11 w-full"
+                  onClick={() =>
+                    toast({
+                      variant: "destructive",
+                      title: "Google orqali kirish hozircha mavjud emas",
+                      description:
+                        "Iltimos, birozdan keyin qayta urinib ko'ring.",
+                    })
+                  }
+                  type="button"
+                >
+                  Google bilan davom etish
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
