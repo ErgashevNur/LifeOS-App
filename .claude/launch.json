@@ -1,0 +1,22 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Frontend (Vite)",
+      "runtimeExecutable": "/Users/apple/.nvm/versions/node/v24.14.1/bin/node",
+      "runtimeArgs": ["/Users/apple/Desktop/LifeOS-App/node_modules/.bin/vite"],
+      "port": 5173
+    },
+    {
+      "name": "Backend (NestJS)",
+      "runtimeExecutable": "/Users/apple/.nvm/versions/node/v24.14.1/bin/node",
+      "runtimeArgs": [
+        "/Users/apple/Desktop/LifeOS-App/backend/node_modules/.bin/ts-node-dev",
+        "--respawn",
+        "--transpile-only",
+        "/Users/apple/Desktop/LifeOS-App/backend/src/main.ts"
+      ],
+      "port": 4000
+    }
+  ]
+}
