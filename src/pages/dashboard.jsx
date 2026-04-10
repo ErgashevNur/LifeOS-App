@@ -1,8 +1,31 @@
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { getAuthSession } from "@/lib/auth";
+import {
+  ArrowUpRight,
+  Check,
+  Plus,
+  Target,
+  Flame,
+  Clock,
+  Zap,
+  TrendingUp,
+  Wallet,
+  MessageSquare,
+  Send,
+  BookOpen,
+  Repeat,
+  MoreHorizontal,
+  ChevronRight,
+  Activity,
+  Trophy,
+  Users,
+  Sparkles,
+  Circle
+} from "lucide-react";
 import { useLifeOSData } from "@/lib/lifeos-store";
+import { getAuthSession } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import {
   Flame, Bell, CheckCircle2, Circle, Plus, Zap,
@@ -67,401 +90,451 @@ function FocusTimer({ onClose }) {
   const circ = 2 * Math.PI * r;
   const progress = secs / (25 * 60);
 
+// ── Reusable Card ──────────────────────────────────────────────
+function Card({ children, className }) {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-sm"
+    <div
+      className={cn(
+        "bg-white rounded-xl border border-black/[0.06] shadow-soft",
+        className
+      )}
     >
-      <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full text-slate-500 hover:text-white hover:bg-white/10 transition-colors">
-        <X className="w-5 h-5" />
-      </button>
-
-      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1 }}>
-        <p className="text-center text-[10px] font-black tracking-[0.4em] uppercase text-indigo-400 mb-8">
-          FOCUS SESSION
-        </p>
-
-        <div className="relative w-48 h-48 mx-auto mb-10">
-          <svg className="absolute inset-0 -rotate-90" viewBox="0 0 128 128">
-            <circle cx="64" cy="64" r={r} fill="none" stroke="#1e1e2e" strokeWidth="6" />
-            <motion.circle
-              cx="64" cy="64" r={r} fill="none"
-              stroke={done ? "#10B981" : "#6366F1"}
-              strokeWidth="6"
-              strokeDasharray={circ}
-              strokeDashoffset={circ * (1 - progress)}
-              strokeLinecap="round"
-              style={{ transition: "stroke-dashoffset 1s linear, stroke 0.5s" }}
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            {done ? (
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex flex-col items-center gap-2">
-                <CheckCircle2 className="w-10 h-10 text-emerald-400" />
-                <span className="text-sm font-black text-white">Bajarildi!</span>
-              </motion.div>
-            ) : (
-              <>
-                <span className="text-4xl font-black text-white tabular-nums">{mm}:{ss}</span>
-                <span className="text-xs font-semibold text-slate-500 mt-1">daqiqa</span>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="flex gap-3 justify-center">
-          {!done && (
-            <button
-              onClick={() => setRunning((r) => !r)}
-              className={cn(
-                "px-8 py-3.5 rounded-2xl text-sm font-black tracking-wide transition-all active:scale-95",
-                running
-                  ? "bg-white/10 text-white border border-white/20"
-                  : "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30",
-              )}
-            >
-              {running ? "PAUSE" : "START"}
-            </button>
-          )}
-          <button
-            onClick={() => { setSecs(25 * 60); setRunning(false); setDone(false); }}
-            className="px-8 py-3.5 rounded-2xl text-sm font-black text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 transition-all"
-          >
-            RESET
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
-// ─── Progress Ring ────────────────────────────────────────────────────────────
-function ProgressRing({ value, size = 64, stroke = 5, color = "#6366F1" }) {
-  const r = (size - stroke * 2) / 2;
-  const circ = 2 * Math.PI * r;
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg className="-rotate-90" width={size} height={size}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F1F5F9" strokeWidth={stroke} />
-        <motion.circle
-          cx={size / 2} cy={size / 2} r={r} fill="none"
-          stroke={color} strokeWidth={stroke}
-          strokeDasharray={circ}
-          initial={{ strokeDashoffset: circ }}
-          animate={{ strokeDashoffset: circ * (1 - value / 100) }}
-          transition={{ duration: 1.2, ease: "easeOut" }}
-          strokeLinecap="round"
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-sm font-black text-slate-900">{value}%</span>
-      </div>
+      {children}
     </div>
   );
 }
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
-function StatCard({ icon: Icon, label, value, color, bg, delay = 0 }) {
+// ── Section Header ─────────────────────────────────────────────
+function CardHeader({ title, subtitle, icon: Icon, iconColor, action }) {
   return (
-    <motion.div
-      variants={fadeUp}
-      className="flex items-center gap-3.5 rounded-2xl bg-white p-4 ring-1 ring-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-    >
-      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", bg)}>
-        <Icon className={cn("w-5 h-5", color)} />
+    <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-50">
+      <div className="flex items-center gap-2.5">
+        {Icon && (
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: `${iconColor}18` }}
+          >
+            <Icon className="w-3.5 h-3.5" style={{ color: iconColor }} strokeWidth={2} />
+          </div>
+        )}
+        <div>
+          <p className="text-[13.5px] font-semibold text-gray-800 leading-tight">{title}</p>
+          {subtitle && (
+            <p className="text-[11px] text-gray-400 mt-0.5">{subtitle}</p>
+          )}
+        </div>
       </div>
-      <div>
-        <p className="text-xl font-black text-slate-900 leading-none">{value}</p>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mt-1">{label}</p>
-      </div>
-    </motion.div>
+      {action && action}
+    </div>
   );
 }
 
-// ─── Module Card ──────────────────────────────────────────────────────────────
-function ModuleCard({ icon: Icon, label, to, iconBg, iconColor, navigate }) {
+// ── Stat Card ──────────────────────────────────────────────────
+function StatCard({ label, value, icon: Icon, color, change }) {
   return (
-    <motion.button
-      variants={fadeUp}
-      onClick={() => navigate(to)}
-      whileTap={{ scale: 0.94 }}
-      className="flex flex-col items-center gap-2.5 rounded-2xl bg-white p-4 ring-1 ring-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-    >
-      <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center", iconBg)}>
-        <Icon className={cn("w-5 h-5", iconColor)} />
+    <Card className="p-5 hover:shadow-medium transition-shadow duration-200 cursor-default group">
+      <div className="flex items-start justify-between mb-4">
+        <div
+          className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: `${color}15` }}
+        >
+          <Icon className="w-4.5 h-4.5" style={{ color }} strokeWidth={2} />
+        </div>
+        <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+          {change}
+        </span>
       </div>
-      <span className="text-[11px] font-bold text-slate-600">{label}</span>
-    </motion.button>
+      <p className="text-2xl font-bold text-gray-900 tracking-tight">{value}</p>
+      <p className="text-[12px] text-gray-500 font-medium mt-1">{label}</p>
+    </Card>
   );
 }
 
-// ─── Main Dashboard ───────────────────────────────────────────────────────────
+// ── Progress Bar ───────────────────────────────────────────────
+function ProgressBar({ value, color }) {
+  return (
+    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+      <motion.div
+        initial={{ width: 0 }}
+        animate={{ width: `${value}%` }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="h-full rounded-full"
+        style={{ backgroundColor: color }}
+      />
+    </div>
+  );
+}
+
+// ── Main Dashboard ─────────────────────────────────────────────
 export default function DashboardPage() {
-  const navigate = useNavigate();
-  const session = getAuthSession();
+  const { t } = useTranslation();
   const { data, actions, dashboardSummary } = useLifeOSData();
-  const [newTask, setNewTask] = useState("");
-  const [focusOpen, setFocusOpen] = useState(false);
+  const session = getAuthSession();
+  const [newGoal, setNewGoal] = useState("");
+  const [newComment, setNewComment] = useState("");
+  const [comments, setComments] = useState([
+    { id: 1, user: "Asadbek", avatar: "A", color: "#7C3AED", text: "Maqsadlarga yetish uchun reja eng muhimi!", time: "2m ago" },
+    { id: 2, user: "Muhammad", avatar: "M", color: "#3B82F6", text: "LifeOS'dagi moliya markazi juda foydali bo'libdi.", time: "10m ago" },
+    { id: 3, user: "Sardor", avatar: "S", color: "#10B981", text: "Odatlar bo'limini kunlik ishlataman, juda qulay!", time: "25m ago" },
+  ]);
 
-  const day      = getDayCount(session?.createdAt);
-  const greeting = getGreeting();
-  const status   = getStatus(dashboardSummary.goalsCompletion ?? 0);
-  const tasks    = data.dashboard.tasks ?? [];
-  const done     = tasks.filter((t) => t.done).length;
-  const pct      = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
-  const initials = getInitials(session);
+  const today = new Date().toLocaleDateString("uz-UZ", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 
-  const addTask = () => {
-    if (!newTask.trim()) return;
-    actions.addDashboardTask(newTask.trim());
-    setNewTask("");
+  const handleAddComment = () => {
+    if (!newComment.trim()) return;
+    setComments([
+      {
+        id: Date.now(),
+        user: session?.firstName ?? "Siz",
+        avatar: session?.firstName?.[0] ?? "S",
+        color: "#7C3AED",
+        text: newComment,
+        time: "Hozir",
+      },
+      ...comments,
+    ]);
+    setNewComment("");
   };
 
-  return (
-    <div className="min-h-full bg-slate-50">
-      <AnimatePresence>{focusOpen && <FocusTimer onClose={() => setFocusOpen(false)} />}</AnimatePresence>
+  const handleAddGoal = () => {
+    if (!newGoal.trim()) return;
+    actions.addGoal({
+      title: newGoal,
+      category: "Personal",
+      targetDate: new Date().toISOString(),
+    });
+    setNewGoal("");
+  };
 
-      {/* ── Header ────────────────────────────────────────────────── */}
-      <motion.header
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 lg:px-8"
-      >
-        <div className="mx-auto max-w-5xl flex h-16 items-center justify-between">
-          {/* Left */}
-          <div>
-            <p className="text-[10px] font-black tracking-[0.3em] text-slate-400 uppercase">
-              {greeting}
-            </p>
-            <p className="text-base font-black text-slate-900 leading-tight mt-0.5">
-              {session?.firstName ? `${session.firstName}!` : "Xush kelibsiz!"}
+  const completedTasks = data.dashboard.tasks.filter((t) => t.done).length;
+  const totalTasks = data.dashboard.tasks.length;
+
+  return (
+    <div className="space-y-5">
+
+      {/* ── Greeting Banner ───────────────────────────── */}
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 gradient-animated p-6 text-white shadow-medium">
+        {/* Background decorations */}
+        <div className="absolute right-0 top-0 w-64 h-full opacity-10">
+          <div className="absolute top-2 right-8 w-32 h-32 rounded-full bg-white blur-3xl" />
+          <div className="absolute bottom-2 right-24 w-20 h-20 rounded-full bg-white blur-2xl" />
+        </div>
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center gap-5">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="w-4 h-4 text-violet-200" strokeWidth={1.5} />
+              <p className="text-violet-200 text-[13px] font-medium">{today}</p>
+            </div>
+            <h1 className="text-xl lg:text-2xl font-bold leading-snug">
+              Salom, {session?.firstName ?? "Do'stim"}! 👋
+            </h1>
+            <p className="text-violet-200/80 text-sm mt-1">
+              Bugun {completedTasks}/{totalTasks} vazifa bajarildi. Davom eting!
             </p>
           </div>
 
-          {/* Right */}
-          <div className="flex items-center gap-3">
-            {/* Day counter */}
-            <div className="hidden sm:flex items-center gap-1.5 rounded-xl bg-indigo-50 px-3 py-1.5">
-              <Timer className="w-3.5 h-3.5 text-indigo-500" />
-              <span className="text-[11px] font-black text-indigo-600">
-                Kun {day} / 90
-              </span>
-            </div>
-
-            {/* Streak */}
-            <div className="flex items-center gap-1 rounded-xl bg-orange-50 px-3 py-1.5">
-              <Flame className="w-3.5 h-3.5 text-orange-500" />
-              <span className="text-[11px] font-black text-orange-600">
-                {dashboardSummary.streak ?? 0}
-              </span>
-            </div>
-
-            {/* Notification bell */}
-            <button className="relative w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors">
-              <Bell className="w-4 h-4 text-slate-500" />
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500" />
+          {/* Quick goal input */}
+          <div className="flex gap-2 w-full lg:w-auto">
+            <input
+              value={newGoal}
+              onChange={(e) => setNewGoal(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddGoal()}
+              placeholder="Yangi maqsad qo'shing..."
+              className="flex-1 lg:w-64 h-10 rounded-lg bg-white/10 border border-white/20 text-white placeholder:text-white/40 text-[13px] font-medium px-4 outline-none focus:bg-white/15 focus:border-white/40 transition-all"
+            />
+            <button
+              onClick={handleAddGoal}
+              className="h-10 px-4 rounded-lg bg-white text-violet-700 text-[13px] font-bold hover:bg-violet-50 transition-colors flex items-center gap-1.5 flex-shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+              Qo'shish
             </button>
-
-            {/* Avatar */}
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-sm cursor-pointer" onClick={() => navigate("/settings")}>
-              <span className="text-xs font-black text-white">{initials}</span>
-            </div>
           </div>
         </div>
-      </motion.header>
+      </div>
 
-      {/* ── Page body ─────────────────────────────────────────────── */}
-      <motion.div
-        variants={stagger}
-        initial="hidden"
-        animate="show"
-        className="mx-auto max-w-5xl px-4 lg:px-8 py-6 flex flex-col gap-5"
-      >
+      {/* ── Stats Row ─────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label={t("dashboard.metrics.productivity")}
+          value="88%"
+          icon={Zap}
+          color="#7C3AED"
+          change="+4%"
+        />
+        <StatCard
+          label={t("dashboard.metrics.streaks")}
+          value={`${dashboardSummary.streak}🔥`}
+          icon={Flame}
+          color="#F97316"
+          change="+2"
+        />
+        <StatCard
+          label={t("dashboard.metrics.focus")}
+          value="6.4h"
+          icon={Clock}
+          color="#0EA5E9"
+          change="+1.2h"
+        />
+        <StatCard
+          label={t("dashboard.metrics.goals")}
+          value={dashboardSummary.goalsCount}
+          icon={Target}
+          color="#10B981"
+          change="Active"
+        />
+      </div>
 
-        {/* ── Hero card ─────────────────────────────── */}
-        <motion.div
-          variants={fadeUp}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-600 p-6 lg:p-8 text-white shadow-xl shadow-indigo-200"
-        >
-          {/* decorative circles */}
-          <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
-          <div className="pointer-events-none absolute -right-4 -bottom-16 h-56 w-56 rounded-full bg-white/5" />
+      {/* ── Main Grid ─────────────────────────────────── */}
+      <div className="grid lg:grid-cols-3 gap-5">
 
-          <div className="relative z-10 flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-4">
-                <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black tracking-widest uppercase", "bg-white/20 text-white")}>
-                  <span className={cn("w-1.5 h-1.5 rounded-full", status.dot)} />
-                  {status.label}
+        {/* Left Column (2 cols) */}
+        <div className="lg:col-span-2 space-y-5">
+
+          {/* Tasks Widget */}
+          <Card>
+            <CardHeader
+              title={t("dashboard.tasks.header")}
+              subtitle={`${completedTasks}/${totalTasks} ${t("dashboard.tasks.completed")}`}
+              icon={Check}
+              iconColor="#7C3AED"
+              action={
+                <Link
+                  to="/goals"
+                  className="flex items-center gap-1 text-[12px] text-violet-600 font-semibold hover:text-violet-700 transition-colors"
+                >
+                  Barchasi
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              }
+            />
+
+            {/* Progress indicator */}
+            <div className="px-5 py-3 border-b border-gray-50">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] text-gray-500 font-medium">Kunlik progress</span>
+                <span className="text-[11px] font-bold text-gray-700">
+                  {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
                 </span>
               </div>
-              <h2 className="text-2xl lg:text-3xl font-black tracking-tight leading-tight">
-                Bugungi vazifalar
-              </h2>
-              <p className="mt-1.5 text-indigo-200 text-sm font-medium">
-                {done} / {tasks.length} bajarildi •{" "}
-                <span className="text-white font-bold">Kun {day} / 90</span>
-              </p>
-
-              {/* Progress bar */}
-              <div className="mt-5 h-2 rounded-full bg-white/20 overflow-hidden">
-                <motion.div
-                  className="h-full rounded-full bg-white"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
-                />
-              </div>
-              <p className="mt-2 text-xs font-bold text-indigo-200">{pct}% yakunlangan</p>
+              <ProgressBar
+                value={totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}
+                color="#7C3AED"
+              />
             </div>
 
-            <ProgressRing value={pct} size={76} stroke={6} color="#fff" />
-          </div>
-        </motion.div>
-
-        {/* ── Two-column grid (tasks + stats) ────────── */}
-        <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
-
-          {/* Today's tasks */}
-          <motion.div variants={fadeUp} className="rounded-3xl bg-white ring-1 ring-slate-100 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-base font-black text-slate-900">Bugungi vazifalar</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                  TODAY'S MISSION
-                </p>
-              </div>
-              <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
-                {done}/{tasks.length}
-              </span>
-            </div>
-
-            {/* Task list */}
-            <div className="flex flex-col gap-1 mb-5 min-h-[80px]">
-              <AnimatePresence>
-                {tasks.length === 0 && (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-sm text-slate-400 text-center py-6"
-                  >
-                    Hali vazifa yo'q. Birinchisini qo'shing.
-                  </motion.p>
-                )}
-                {tasks.map((task, i) => (
-                  <motion.button
+            <div className="p-3 space-y-1">
+              <AnimatePresence mode="popLayout">
+                {data.dashboard.tasks.map((task) => (
+                  <motion.div
                     key={task.id}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 8 }}
-                    transition={{ delay: i * 0.04 }}
-                    onClick={() => actions.toggleDashboardTask(task.id)}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-slate-50 transition-colors group"
-                  >
-                    {task.done ? (
-                      <CheckCircle2 className="w-5 h-5 text-indigo-500 shrink-0" />
-                    ) : (
-                      <Circle className="w-5 h-5 text-slate-300 shrink-0 group-hover:text-slate-400 transition-colors" />
+                    layout
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.15 }}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer group transition-colors",
+                      task.done ? "hover:bg-gray-50/80" : "hover:bg-gray-50"
                     )}
+                    onClick={() => actions.toggleDashboardTask(task.id)}
+                  >
+                    {/* Checkbox */}
+                    <div
+                      className={cn(
+                        "w-4.5 h-4.5 rounded-[5px] border-2 flex items-center justify-center transition-all duration-150 flex-shrink-0",
+                        task.done
+                          ? "bg-violet-600 border-violet-600"
+                          : "border-gray-300 group-hover:border-gray-400"
+                      )}
+                    >
+                      {task.done && (
+                        <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                      )}
+                    </div>
+
                     <span
                       className={cn(
-                        "text-sm font-semibold flex-1 transition-all",
-                        task.done ? "line-through text-slate-400" : "text-slate-700",
+                        "text-[13.5px] font-medium flex-1 transition-colors",
+                        task.done ? "line-through text-gray-400" : "text-gray-700"
                       )}
                     >
                       {task.title}
                     </span>
+
                     {task.done && (
-                      <span className="text-[10px] font-bold text-indigo-400 shrink-0">✓</span>
+                      <span className="text-[10px] text-gray-400 font-medium">Bajarildi ✓</span>
                     )}
-                  </motion.button>
+                  </motion.div>
                 ))}
               </AnimatePresence>
-            </div>
 
-            {/* Add task */}
-            <div className="flex gap-2 items-center rounded-2xl bg-slate-50 ring-1 ring-slate-100 px-4 py-2">
-              <input
-                value={newTask}
-                onChange={(e) => setNewTask(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addTask()}
-                placeholder="Yangi vazifa qo'shing..."
-                className="flex-1 bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400"
-              />
-              <motion.button
-                onClick={addTask}
-                whileTap={{ scale: 0.88 }}
-                className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0 hover:bg-indigo-500 transition-colors"
-              >
-                <Plus className="w-4 h-4 text-white" />
-              </motion.button>
+              {data.dashboard.tasks.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                  <Circle className="w-8 h-8 mb-2 opacity-30" strokeWidth={1} />
+                  <p className="text-[13px] font-medium">Hali vazifa yo'q</p>
+                </div>
+              )}
             </div>
-          </motion.div>
+          </Card>
 
-          {/* Quick stats */}
-          <motion.div variants={fadeUp} className="flex flex-col gap-3">
-            <StatCard icon={Flame}     label="Streak"    value={`${dashboardSummary.streak ?? 0} kun`}  color="text-orange-500" bg="bg-orange-50" />
-            <StatCard icon={Target}    label="Maqsadlar" value={`${dashboardSummary.goalsCount ?? 0}`}   color="text-indigo-500" bg="bg-indigo-50" />
-            <StatCard icon={Repeat}    label="Odatlar"   value={`${dashboardSummary.completedHabits ?? 0}/${dashboardSummary.habitsCount ?? 0}`} color="text-violet-500" bg="bg-violet-50" />
-            <StatCard icon={BarChart3} label="Fokus"     value={`${(dashboardSummary.focusHours ?? 0).toFixed(1)}h`} color="text-emerald-500" bg="bg-emerald-50" />
-          </motion.div>
+          {/* Modules Quick View */}
+          <div className="grid sm:grid-cols-3 gap-4">
+            {[
+              { label: "Kitoblar", icon: BookOpen, color: "#F59E0B", to: "/books", stat: `${data.books?.length ?? 0} kitob`, sub: "kuzatilmoqda" },
+              { label: "Odatlar", icon: Repeat, color: "#10B981", to: "/habits", stat: `${data.habits?.length ?? 0} odat`, sub: "faol" },
+              { label: "Mahorat", icon: Trophy, color: "#9333EA", to: "/mastery", stat: "Focus", sub: "yozing" },
+            ].map((mod) => (
+              <Link to={mod.to} key={mod.to}>
+                <Card className="p-4 hover:shadow-medium transition-all duration-200 cursor-pointer group hover:-translate-y-0.5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: `${mod.color}15` }}
+                    >
+                      <mod.icon className="w-4 h-4" style={{ color: mod.color }} strokeWidth={2} />
+                    </div>
+                    <ArrowUpRight
+                      className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-500 transition-colors"
+                    />
+                  </div>
+                  <p className="text-[15px] font-bold text-gray-800">{mod.stat}</p>
+                  <p className="text-[11px] text-gray-400 font-medium mt-0.5">{mod.sub}</p>
+                </Card>
+              </Link>
+            ))}
+          </div>
         </div>
 
-        {/* ── START FOCUS button ─────────────────────── */}
-        <motion.button
-          variants={fadeUp}
-          onClick={() => setFocusOpen(true)}
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.98 }}
-          className="relative overflow-hidden w-full flex items-center justify-center gap-3 rounded-3xl bg-slate-900 py-5 text-white font-black text-base tracking-widest uppercase shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-colors"
-        >
-          {/* shimmer effect */}
-          <motion.div
-            className="pointer-events-none absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent"
-            animate={{ x: ["-100%", "200%"] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "linear", repeatDelay: 2 }}
-          />
-          <Zap className="w-5 h-5 text-indigo-400" />
-          START FOCUS
-          <span className="text-xs font-bold text-slate-500 ml-1">25 min</span>
-        </motion.button>
+        {/* Right Column (1 col) */}
+        <div className="space-y-5">
 
-        {/* ── AI suggestion strip ────────────────────── */}
-        <motion.div
-          variants={fadeUp}
-          onClick={() => navigate("/assistant")}
-          className="flex items-center gap-4 rounded-2xl bg-gradient-to-r from-violet-50 to-indigo-50 ring-1 ring-indigo-100 px-5 py-4 cursor-pointer hover:ring-indigo-200 transition-all group"
-        >
-          <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0">
-            <Sparkles className="w-4 h-4 text-indigo-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">AI MURABBIY</p>
-            <p className="text-sm font-semibold text-slate-700 mt-0.5 truncate">
-              Bugungi rejangizni ko'rib chiqing →
-            </p>
-          </div>
-          <ArrowRight className="w-4 h-4 text-indigo-400 shrink-0 group-hover:translate-x-1 transition-transform" />
-        </motion.div>
+          {/* Finance Widget */}
+          <Card>
+            <CardHeader
+              title={t("dashboard.finance.header")}
+              icon={Wallet}
+              iconColor="#14B8A6"
+              action={
+                <Link to="/finance">
+                  <ArrowUpRight className="w-4 h-4 text-gray-400 hover:text-gray-600 transition-colors" />
+                </Link>
+              }
+            />
+            <div className="p-5 space-y-4">
+              <div>
+                <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wider mb-1">
+                  {t("dashboard.finance.wealth")}
+                </p>
+                <div className="flex items-end gap-2">
+                  <p className="text-3xl font-bold text-gray-900">92%</p>
+                  <span className="text-[11px] text-emerald-600 font-semibold mb-1 bg-emerald-50 px-2 py-0.5 rounded-full">
+                    +3%
+                  </span>
+                </div>
+              </div>
 
-        {/* ── Module shortcuts ───────────────────────── */}
-        <motion.div variants={fadeUp}>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">MODULLAR</p>
-          </div>
-          <motion.div variants={stagger} className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-            <ModuleCard icon={Repeat}     label="Odatlar"  to="/habits"     iconBg="bg-violet-50"  iconColor="text-violet-600"  navigate={navigate} />
-            <ModuleCard icon={BookOpen}   label="Kitoblar" to="/books"      iconBg="bg-amber-50"   iconColor="text-amber-600"   navigate={navigate} />
-            <ModuleCard icon={HeartPulse} label="Sog'liq"  to="/health"     iconBg="bg-rose-50"    iconColor="text-rose-500"    navigate={navigate} />
-            <ModuleCard icon={Trophy}     label="Mahorat"  to="/mastery"    iconBg="bg-emerald-50" iconColor="text-emerald-600" navigate={navigate} />
-            <ModuleCard icon={Users}      label="Network"  to="/networking" iconBg="bg-sky-50"     iconColor="text-sky-600"     navigate={navigate} />
-            <ModuleCard icon={Wallet}     label="Moliya"   to="/finance"    iconBg="bg-green-50"   iconColor="text-green-600"   navigate={navigate} />
-          </motion.div>
-        </motion.div>
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="text-[11px] text-gray-500 font-medium">
+                    {t("dashboard.finance.debt")}
+                  </span>
+                  <span className="text-[11px] font-semibold text-gray-600">$1,200</span>
+                </div>
+                <ProgressBar value={70} color="#14B8A6" />
+              </div>
 
-      </motion.div>
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                {[
+                  { label: "Daromad", value: "$4,200", color: "#10B981" },
+                  { label: "Xarajat", value: "$1,800", color: "#F43F5E" },
+                ].map((item) => (
+                  <div key={item.label} className="bg-gray-50/70 rounded-lg p-3">
+                    <p className="text-[11px] text-gray-500 font-medium">{item.label}</p>
+                    <p
+                      className="text-[15px] font-bold mt-0.5"
+                      style={{ color: item.color }}
+                    >
+                      {item.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          {/* Community Pulse */}
+          <Card>
+            <CardHeader
+              title={t("dashboard.community_pulse.header")}
+              subtitle={t("dashboard.community_pulse.subtitle")}
+              icon={MessageSquare}
+              iconColor="#EC4899"
+            />
+
+            <div className="flex flex-col" style={{ height: 320 }}>
+              {/* Comments list */}
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 no-scrollbar">
+                <AnimatePresence>
+                  {comments.map((comment, i) => (
+                    <motion.div
+                      key={comment.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04 }}
+                      className="flex gap-2.5"
+                    >
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 mt-0.5"
+                        style={{ backgroundColor: comment.color }}
+                      >
+                        {comment.avatar}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[12px] font-semibold text-gray-700">
+                            {comment.user}
+                          </span>
+                          <span className="text-[10px] text-gray-400">{comment.time}</span>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg px-3 py-2">
+                          <p className="text-[12.5px] text-gray-600 leading-relaxed">
+                            {comment.text}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+
+              {/* Input */}
+              <div className="px-4 pb-4 pt-2 border-t border-gray-50">
+                <div className="flex gap-2">
+                  <input
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
+                    placeholder={t("dashboard.community_pulse.comment_placeholder")}
+                    className="flex-1 h-9 rounded-lg bg-gray-50 border border-gray-100 text-[13px] text-gray-700 placeholder:text-gray-400 px-3 outline-none focus:border-violet-300 focus:bg-white transition-all"
+                  />
+                  <button
+                    onClick={handleAddComment}
+                    className="w-9 h-9 rounded-lg bg-violet-600 text-white flex items-center justify-center hover:bg-violet-700 transition-colors flex-shrink-0"
+                  >
+                    <Send className="w-3.5 h-3.5" strokeWidth={2} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
