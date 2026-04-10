@@ -1,6 +1,7 @@
 import { useLifeOSData } from "@/lib/lifeos-store";
 import { cn } from "@/lib/utils";
 import { clearAuthSession, getAuthSession } from "@/lib/auth";
+import { useLifeOSData } from "@/lib/lifeos-store";
 import {
   BookOpen,
   Bot,
@@ -43,8 +44,8 @@ const BASE_NAV_ITEMS = [
 
 const ADMIN_NAV_ITEM = { to: "/users", label: "Users", icon: Shield, color: "#EF4444" };
 
-function isRouteActive(currentPath, targetPath) {
-  return currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
+function isActive(current, target) {
+  return current === target || current.startsWith(`${target}/`);
 }
 
 function SidebarContent({ navItems, location, session, handleLogout, onNavClick }) {
@@ -139,8 +140,8 @@ function SidebarContent({ navItems, location, session, handleLogout, onNavClick 
 }
 
 export default function AppLayout() {
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
   const session = getAuthSession();
   const { backendHealth } = useLifeOSData();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -149,8 +150,7 @@ export default function AppLayout() {
     return <Navigate to="/auth?tab=login" replace />;
   }
 
-  const navItems =
-    session.role === "admin" ? [...BASE_NAV_ITEMS, ADMIN_NAV_ITEM] : BASE_NAV_ITEMS;
+  if (!session) return <Navigate to="/auth?tab=login" replace />;
 
   const currentItem = navItems.find((item) => isRouteActive(location.pathname, item.to));
   const currentPage = currentItem?.label ?? "LifeOS";
@@ -159,6 +159,8 @@ export default function AppLayout() {
     clearAuthSession();
     navigate("/auth?tab=login", { replace: true });
   };
+
+  const initials = getInitials(session);
 
   return (
     <div className="flex h-screen bg-[#F5F5F4] overflow-hidden">
@@ -239,6 +241,8 @@ export default function AppLayout() {
               {currentPage}
             </span>
           </div>
+          <span className="text-sm font-black tracking-tight text-slate-900">LifeOS</span>
+        </div>
 
           <div className="flex-1" />
 
@@ -273,6 +277,38 @@ export default function AppLayout() {
           </div>
         </main>
       </div>
+
+      {/* ─── Mobile bottom tabs ─────────────────────────────────── */}
+      <nav className="fixed bottom-0 inset-x-0 z-40 flex h-16 border-t border-slate-200 bg-white/90 backdrop-blur-md lg:hidden">
+        {BOTTOM_TABS.map(({ to, label, icon: Icon }) => {
+          const active = isActive(location.pathname, to);
+          return (
+            <button
+              key={to}
+              onClick={() => navigate(to)}
+              className="flex flex-1 flex-col items-center justify-center gap-1 focus:outline-none"
+            >
+              <motion.div whileTap={{ scale: 0.85 }}>
+                <Icon
+                  className={cn(
+                    "h-5 w-5 transition-colors duration-150",
+                    active ? "text-indigo-600" : "text-slate-400",
+                  )}
+                  strokeWidth={active ? 2.5 : 1.8}
+                />
+              </motion.div>
+              <span
+                className={cn(
+                  "text-[10px] font-bold transition-colors duration-150",
+                  active ? "text-indigo-600" : "text-slate-400",
+                )}
+              >
+                {label}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }

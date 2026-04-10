@@ -27,6 +27,68 @@ import {
 import { useLifeOSData } from "@/lib/lifeos-store";
 import { getAuthSession } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import {
+  Flame, Bell, CheckCircle2, Circle, Plus, Zap,
+  Clock, TrendingUp, BookOpen, Repeat, HeartPulse,
+  Trophy, Wallet, Users, X, Timer, ArrowRight,
+  Target, BarChart3, Sparkles,
+} from "lucide-react";
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+function getDayCount(createdAt) {
+  if (!createdAt) return 1;
+  return Math.max(1, Math.floor((Date.now() - new Date(createdAt)) / 86400000) + 1);
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Xayrli tong";
+  if (h < 17) return "Xayrli kun";
+  return "Xayrli kech";
+}
+
+function getStatus(pct) {
+  if (pct >= 80) return { label: "ON TRACK",       bg: "bg-emerald-50", text: "text-emerald-600", dot: "bg-emerald-500" };
+  if (pct >= 40) return { label: "FALLING BEHIND",  bg: "bg-amber-50",   text: "text-amber-600",   dot: "bg-amber-500" };
+  return           { label: "BEHIND",              bg: "bg-red-50",     text: "text-red-600",     dot: "bg-red-500" };
+}
+
+function getInitials(session) {
+  return ((session?.firstName?.[0] ?? "") + (session?.lastName?.[0] ?? "")).toUpperCase() || "U";
+}
+
+// ─── Animation variants ──────────────────────────────────────────────────────
+const fadeUp = {
+  hidden: { opacity: 0, y: 16 },
+  show:   { opacity: 1, y: 0 },
+};
+
+const stagger = {
+  show: { transition: { staggerChildren: 0.07 } },
+};
+
+// ─── Focus Timer ─────────────────────────────────────────────────────────────
+function FocusTimer({ onClose }) {
+  const [secs, setSecs] = useState(25 * 60);
+  const [running, setRunning] = useState(false);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!running || done) return;
+    const id = setInterval(() => {
+      setSecs((s) => {
+        if (s <= 1) { clearInterval(id); setDone(true); setRunning(false); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [running, done]);
+
+  const mm  = String(Math.floor(secs / 60)).padStart(2, "0");
+  const ss  = String(secs % 60).padStart(2, "0");
+  const r   = 54;
+  const circ = 2 * Math.PI * r;
+  const progress = secs / (25 * 60);
 
 // ── Reusable Card ──────────────────────────────────────────────
 function Card({ children, className }) {
