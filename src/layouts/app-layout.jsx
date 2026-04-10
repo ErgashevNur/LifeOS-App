@@ -1,7 +1,6 @@
 import { useLifeOSData } from "@/lib/lifeos-store";
 import { cn } from "@/lib/utils";
 import { clearAuthSession, getAuthSession } from "@/lib/auth";
-import { useLifeOSData } from "@/lib/lifeos-store";
 import {
   BookOpen,
   Bot,
@@ -20,8 +19,7 @@ import {
   Zap,
   ChevronRight,
   Menu,
-  X,
-  Bell
+  X
 } from "lucide-react";
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
@@ -43,6 +41,7 @@ const BASE_NAV_ITEMS = [
 ];
 
 const ADMIN_NAV_ITEM = { to: "/users", label: "Users", icon: Shield, color: "#EF4444" };
+const BOTTOM_TABS = BASE_NAV_ITEMS.slice(0, 4);
 
 function isActive(current, target) {
   return current === target || current.startsWith(`${target}/`);
@@ -86,7 +85,7 @@ function SidebarContent({ navItems, location, session, handleLogout, onNavClick 
 
         {navItems.map((item) => {
           const Icon = item.icon;
-          const active = isRouteActive(location.pathname, item.to);
+          const active = isActive(location.pathname, item.to);
 
           return (
             <NavLink
@@ -150,17 +149,16 @@ export default function AppLayout() {
     return <Navigate to="/auth?tab=login" replace />;
   }
 
-  if (!session) return <Navigate to="/auth?tab=login" replace />;
+  const navItems =
+    session.role === "admin" ? [...BASE_NAV_ITEMS, ADMIN_NAV_ITEM] : BASE_NAV_ITEMS;
 
-  const currentItem = navItems.find((item) => isRouteActive(location.pathname, item.to));
+  const currentItem = navItems.find((item) => isActive(location.pathname, item.to));
   const currentPage = currentItem?.label ?? "LifeOS";
 
   const handleLogout = () => {
     clearAuthSession();
     navigate("/auth?tab=login", { replace: true });
   };
-
-  const initials = getInitials(session);
 
   return (
     <div className="flex h-screen bg-[#F5F5F4] overflow-hidden">
@@ -241,9 +239,6 @@ export default function AppLayout() {
               {currentPage}
             </span>
           </div>
-          <span className="text-sm font-black tracking-tight text-slate-900">LifeOS</span>
-        </div>
-
           <div className="flex-1" />
 
           {/* Status pill */}
