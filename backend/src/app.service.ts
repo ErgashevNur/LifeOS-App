@@ -1314,6 +1314,15 @@ export class AppService implements OnModuleInit {
     }
   }
 
+  async getMyProfile(actorUserId: string): Promise<SessionPayload["user"]> {
+    const user = await this.prisma.user.findUnique({ where: { id: actorUserId } });
+    if (!user) {
+      throw new UnauthorizedException("Access token uchun user topilmadi.");
+    }
+
+    return this.toSessionUser(user);
+  }
+
   async getAdminUsers(actorUserId: string): Promise<SessionPayload["user"][]> {
     const actor = await this.prisma.user.findUnique({ where: { id: actorUserId } });
     if (!actor || this.normalizeRole(actor.role) !== "admin") {
