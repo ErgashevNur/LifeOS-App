@@ -1,4 +1,54 @@
-import { PersistedData } from "./types";
+import { CommunityFeedItem, PersistedData } from "./types";
+
+export const DEFAULT_FINANCE_OVERVIEW = {
+  wealthScore: 92,
+  monthlyGrowthPct: 12.4,
+  debtCurrent: 4200,
+  debtTarget: 15000,
+  debtPlanHint: "Snowball usuli orqali qarzlarni 4 oyda yopishingiz mumkin.",
+  savingsCurrent: 3450,
+  savingsTarget: 6000,
+  income: 4200,
+  expense: 1800,
+  investments: [
+    { label: "S&P 500", val: "+8.4%", stat: "Profit" },
+    { label: "Gold", val: "+2.1%", stat: "Stable" },
+    { label: "Real Estate", val: "+14.2%", stat: "Rental" },
+  ],
+};
+
+export const DEFAULT_COMMUNITY_FEED: CommunityFeedItem[] = [
+  {
+    id: 1,
+    user: "Ergashev",
+    role: "Admin",
+    category: "Moliya",
+    text: "Qarzlardan qutilish uchun eng yaxshi usul — 50/30/20 qoidasi. 50% ehtiyojlar, 30% xohishlar, 20% qarzlar uchun.",
+    likes: 42,
+    comments: 12,
+    createdAt: "2026-04-09T15:00:00.000Z",
+  },
+  {
+    id: 2,
+    user: "Rahimov",
+    role: "User",
+    category: "Sog'liq",
+    text: "Kuniga kamida 3 litr suv ichish diqqatni jamlashga 20% ga ko'proq yordam beradi. Sinab ko'ring!",
+    likes: 85,
+    comments: 24,
+    createdAt: "2026-04-09T13:00:00.000Z",
+  },
+  {
+    id: 3,
+    user: "Azizbek",
+    role: "User",
+    category: "Unumdorlik",
+    text: "LifeOS'dagi fokus sessiya moduli orqali bugun 8 soat to'xtovsiz ishladim. Tavsiya qilaman!",
+    likes: 128,
+    comments: 45,
+    createdAt: "2026-04-09T11:00:00.000Z",
+  },
+];
 
 export const DEFAULT_PERSISTED_DATA: PersistedData = {
   users: [

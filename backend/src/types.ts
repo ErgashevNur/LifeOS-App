@@ -225,3 +225,31 @@ export interface PersistedData {
   users: AuthUser[];
   state: LifeOSState;
 }
+
+export interface FinanceOverview {
+  wealthScore: number;
+  monthlyGrowthPct: number;
+  debtCurrent: number;
+  debtTarget: number;
+  debtPlanHint: string;
+  savingsCurrent: number;
+  savingsTarget: number;
+  income: number;
+  expense: number;
+  investments: Array<{
+    label: string;
+    val: string;
+    stat: string;
+  }>;
+}
+
+export interface CommunityFeedItem {
+  id: number;
+  user: string;
+  role: "Admin" | "User";
+  category: string;
+  text: string;
+  likes: number;
+  comments: number;
+  createdAt: string;
+}

@@ -24,6 +24,21 @@ const INITIAL_DATA = {
   mastery: { skills: [], focusSessions: [] },
   network: { people: [], connectedIds: [], messageLog: {} },
   assistant: { messages: [], nextId: 1 },
+  finance: {
+    wealthScore: 0,
+    monthlyGrowthPct: 0,
+    debtCurrent: 0,
+    debtTarget: 1,
+    debtPlanHint: "",
+    savingsCurrent: 0,
+    savingsTarget: 1,
+    income: 0,
+    expense: 0,
+    investments: [],
+  },
+  community: {
+    feed: [],
+  },
   settings: {
     language: "",
     notifications: { habits: false, goals: false, assistant: false },
@@ -167,6 +182,20 @@ function mergeStateWithInitial(nextData = {}) {
       messages: Array.isArray(source.assistant?.messages)
         ? source.assistant.messages
         : INITIAL_DATA.assistant.messages,
+    },
+    finance: {
+      ...INITIAL_DATA.finance,
+      ...(source.finance ?? {}),
+      investments: Array.isArray(source.finance?.investments)
+        ? source.finance.investments
+        : INITIAL_DATA.finance.investments,
+    },
+    community: {
+      ...INITIAL_DATA.community,
+      ...(source.community ?? {}),
+      feed: Array.isArray(source.community?.feed)
+        ? source.community.feed
+        : INITIAL_DATA.community.feed,
     },
     settings: {
       ...INITIAL_DATA.settings,
@@ -333,6 +362,8 @@ export function LifeOSDataProvider({ children }) {
           apiRequest("/mastery", {}, { auth: true }),
           apiRequest("/network", {}, { auth: true }),
           apiRequest("/assistant/messages", {}, { auth: true }),
+          apiRequest("/finance/overview", {}, { auth: true }),
+          apiRequest("/community/feed", {}, { auth: true }),
           apiRequest("/settings", {}, { auth: true }),
         ]);
 
@@ -352,6 +383,8 @@ export function LifeOSDataProvider({ children }) {
           masteryResult,
           networkResult,
           assistantMessagesResult,
+          financeResult,
+          communityResult,
           settingsResult,
         ] = settled;
 
@@ -414,6 +447,23 @@ export function LifeOSDataProvider({ children }) {
           });
         }
 
+        if (financeResult.status === "fulfilled") {
+          nextState = mergeStateWithInitial({
+            ...nextState,
+            finance: financeResult.value,
+          });
+        }
+
+        if (communityResult.status === "fulfilled") {
+          nextState = mergeStateWithInitial({
+            ...nextState,
+            community: {
+              ...nextState.community,
+              feed: communityResult.value,
+            },
+          });
+        }
+
         if (settingsResult.status === "fulfilled") {
           nextState = mergeStateWithInitial({
             ...nextState,
@@ -470,7 +520,12 @@ export function LifeOSDataProvider({ children }) {
 
       try {
         const nextStatePayload = await apiRequest(path, options, { auth: true });
-        const nextState = mergeStateWithInitial(nextStatePayload);
+        const nextState = mergeStateWithInitial({
+          ...data,
+          ...nextStatePayload,
+          finance: data.finance,
+          community: data.community,
+        });
         setData(nextState);
         setError(null);
         void refreshDashboardSummary(nextState);
@@ -516,6 +571,16 @@ export function LifeOSDataProvider({ children }) {
         refreshSlice("/assistant/messages", (prev, payload) => ({
           ...prev,
           assistant: { ...prev.assistant, messages: payload },
+        })),
+      refreshFinance: () =>
+        refreshSlice("/finance/overview", (prev, payload) => ({
+          ...prev,
+          finance: payload,
+        })),
+      refreshCommunityFeed: () =>
+        refreshSlice("/community/feed", (prev, payload) => ({
+          ...prev,
+          community: { ...prev.community, feed: payload },
         })),
       refreshSettings: () =>
         refreshSlice("/settings", (prev, payload) => ({ ...prev, settings: payload })),
@@ -683,6 +748,41 @@ export function LifeOSDataProvider({ children }) {
         void mutate("/assistant/messages", { method: "DELETE" });
       },
 
+      async createCommunityPost({ text, category }) {
+        const trimmed = typeof text === "string" ? text.trim() : "";
+        if (!trimmed) {
+          return null;
+        }
+
+        if (!hasAccessToken()) {
+          setError("Kirish talab qilinadi.");
+          return null;
+        }
+
+        try {
+          const payload = await apiRequest(
+            "/community/feed",
+            {
+              method: "POST",
+              body: JSON.stringify({ text: trimmed, category }),
+            },
+            { auth: true },
+          );
+
+          setData((prev) =>
+            mergeStateWithInitial({
+              ...prev,
+              community: { ...prev.community, feed: payload },
+            }),
+          );
+          setError(null);
+          return payload;
+        } catch (requestError) {
+          setError(requestError.message);
+          return null;
+        }
+      },
+
       setLanguage(language) {
         void mutate("/settings/language", {
           method: "PATCH",
@@ -702,8 +802,24 @@ export function LifeOSDataProvider({ children }) {
         });
       },
 
-      resetState() {
-        return mutate("/state/reset", { method: "POST" });
+      async resetState() {
+        const payload = await mutate("/state/reset", { method: "POST" });
+        if (!payload) {
+          return null;
+        }
+
+        await Promise.all([
+          refreshSlice("/finance/overview", (prev, financePayload) => ({
+            ...prev,
+            finance: financePayload,
+          })),
+          refreshSlice("/community/feed", (prev, communityPayload) => ({
+            ...prev,
+            community: { ...prev.community, feed: communityPayload },
+          })),
+        ]);
+
+        return payload;
       },
 
       async uploadImage(file) {

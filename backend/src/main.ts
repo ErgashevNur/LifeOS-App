@@ -27,6 +27,14 @@ const SWAGGER_TAGS: Array<{ name: string; description: string }> = [
     description: "Dashboard statistikasi va tasklar boshqaruvi.",
   },
   {
+    name: "Finance",
+    description: "Moliya markazi ko'rsatkichlari va overview endpointlari.",
+  },
+  {
+    name: "Community",
+    description: "Community feed va postlar endpointlari.",
+  },
+  {
     name: "Goals",
     description: "Yillik/oylik/haftalik/kunlik maqsadlar CRUD API.",
   },

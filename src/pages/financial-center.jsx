@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { 
-  Wallet, 
   TrendingUp, 
   ArrowUpRight, 
   CreditCard, 
@@ -15,7 +14,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useLifeOSData } from "@/lib/lifeos-store";
 import { cn } from "@/lib/utils";
 
 function FinancialCard({ children, className, title, subtitle, icon: Icon, color }) {
@@ -59,6 +58,29 @@ function ProgressIndicator({ value, label, current, target, color = "bg-indigo-5
 
 export default function FinancialCenterPage() {
   const { t } = useTranslation();
+  const { data } = useLifeOSData();
+  const finance = data.finance ?? {};
+
+  const wealthScore = Number(finance.wealthScore) || 0;
+  const monthlyGrowthPct = Number(finance.monthlyGrowthPct) || 0;
+  const debtCurrent = Math.max(0, Number(finance.debtCurrent) || 0);
+  const debtTarget = Math.max(1, Number(finance.debtTarget) || 1);
+  const debtProgress = Math.max(0, Math.min(100, Math.round((debtCurrent / debtTarget) * 100)));
+  const savingsCurrent = Math.max(0, Number(finance.savingsCurrent) || 0);
+  const savingsTarget = Math.max(1, Number(finance.savingsTarget) || 1);
+  const savingsProgress = Math.max(0, Math.min(100, Math.round((savingsCurrent / savingsTarget) * 100)));
+  const income = Math.max(0, Number(finance.income) || 0);
+  const expense = Math.max(0, Number(finance.expense) || 0);
+  const debtPlanHint =
+    typeof finance.debtPlanHint === "string" && finance.debtPlanHint.trim()
+      ? finance.debtPlanHint
+      : "Moliyaviy reja bo'yicha izoh hali kiritilmagan.";
+  const investments = Array.isArray(finance.investments) ? finance.investments : [];
+
+  const formatMoney = (value) =>
+    `$${Math.round(value).toLocaleString("en-US")}`;
+  const formatPercent = (value) =>
+    `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
 
   return (
     <div className="space-y-12">
@@ -93,7 +115,7 @@ export default function FinancialCenterPage() {
           className="lg:col-span-1 shadow-2xl shadow-indigo-500/10"
         >
           <div className="mt-4 text-center py-8">
-            <p className="text-7xl font-black tracking-tighter text-slate-900">92/100</p>
+            <p className="text-7xl font-black tracking-tighter text-slate-900">{wealthScore}/100</p>
             <p className="mt-4 text-sm font-bold text-slate-400 uppercase tracking-widest">Mukammal Daraja!</p>
           </div>
           <div className="mt-8 space-y-4">
@@ -101,7 +123,7 @@ export default function FinancialCenterPage() {
               <span className="text-sm font-bold text-slate-600">Oylik o'sish</span>
               <span className="flex items-center gap-1 text-emerald-500 font-black">
                 <ArrowUpRight className="w-4 h-4" />
-                +12.4%
+                {formatPercent(monthlyGrowthPct)}
               </span>
             </div>
           </div>
@@ -118,17 +140,17 @@ export default function FinancialCenterPage() {
           <div className="grid gap-12 md:grid-cols-2 mt-8">
             <div className="space-y-8">
               <ProgressIndicator 
-                label="Mashina krediti" 
-                value={75} 
-                current="$4,200" 
-                target="$15,000" 
+                label="Qarz progressi" 
+                value={debtProgress} 
+                current={formatMoney(debtCurrent)} 
+                target={formatMoney(debtTarget)} 
                 color="bg-red-400"
               />
               <ProgressIndicator 
-                label="Oila qarzi" 
-                value={90} 
-                current="$1,500" 
-                target="$15,000" 
+                label="Jamg'arma progressi" 
+                value={savingsProgress} 
+                current={formatMoney(savingsCurrent)} 
+                target={formatMoney(savingsTarget)} 
                 color="bg-emerald-400"
               />
             </div>
@@ -137,7 +159,7 @@ export default function FinancialCenterPage() {
                 <Zap className="w-6 h-6 text-yellow-500" />
               </div>
               <h4 className="text-xl font-black text-slate-900 tracking-tight leading-tight">
-                Snowball usuli orqali qarzlarni 4 oyda yopishingiz mumkin.
+                {debtPlanHint}
               </h4>
               <Button className="w-full h-14 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest">
                 Rejani ko'rish
@@ -157,8 +179,18 @@ export default function FinancialCenterPage() {
         >
           <div className="mt-4 space-y-6">
             <div className="text-center p-6 border-2 border-dashed border-slate-100 rounded-[2.5rem]">
-              <p className="text-4xl font-black tracking-tighter text-slate-900">$3,450</p>
+              <p className="text-4xl font-black tracking-tighter text-slate-900">{formatMoney(savingsCurrent)}</p>
               <p className="text-[10px] font-black uppercase text-slate-400 mt-2">Saved / Total</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Daromad</p>
+                <p className="text-sm font-black text-emerald-600 mt-1">{formatMoney(income)}</p>
+              </div>
+              <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Xarajat</p>
+                <p className="text-sm font-black text-rose-500 mt-1">{formatMoney(expense)}</p>
+              </div>
             </div>
             <Button className="w-full h-12 bg-slate-50 text-slate-900 border border-slate-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-100">
               Transfer Funds
@@ -174,11 +206,7 @@ export default function FinancialCenterPage() {
           className="lg:col-span-2"
         >
           <div className="grid gap-6 sm:grid-cols-3 mt-4">
-            {[ 
-              { label: "S&P 500", val: "+8.4%", stat: "Profit" },
-              { label: "Gold", val: "+2.1%", stat: "Stable" },
-              { label: "Real Estate", val: "+14.2%", stat: "Rental" }
-            ].map((item, i) => (
+            {investments.map((item, i) => (
               <div key={i} className="p-6 rounded-[2rem] bg-slate-50 border border-slate-100 hover:scale-[1.02] transition-transform">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.label}</p>
                 <p className="text-2xl font-black text-slate-900 mt-2">{item.val}</p>
@@ -187,6 +215,11 @@ export default function FinancialCenterPage() {
                 </div>
               </div>
             ))}
+            {investments.length === 0 && (
+              <div className="sm:col-span-3 rounded-[2rem] bg-slate-50 border border-slate-100 p-6 text-center text-sm font-semibold text-slate-400">
+                Investitsiya ma'lumotlari hozircha mavjud emas.
+              </div>
+            )}
           </div>
         </FinancialCard>
       </div>

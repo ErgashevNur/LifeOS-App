@@ -1,78 +1,139 @@
-import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useLifeOSData } from "@/lib/lifeos-store";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, ChevronDown, Target } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  ChevronDown,
+  Plus,
+  Target,
+  TrendingUp,
+  Trash2,
+} from "lucide-react";
 
 const PERIODS = ["Yillik", "Oylik", "Haftalik", "Kunlik"];
-const PERIOD_EN = { Yillik: "ANNUAL", Oylik: "MONTHLY", Haftalik: "WEEKLY", Kunlik: "DAILY" };
-const PERIOD_COLOR = { Yillik: "#00FFAA", Oylik: "#FFB800", Haftalik: "#A78BFA", Kunlik: "#38BDF8" };
 
-function ProgressBar({ value, color }) {
+const PERIOD_META = {
+  Yillik: {
+    short: "YIL",
+    label: "Yillik",
+    accent: "bg-emerald-500",
+    accentText: "text-emerald-600",
+    badge: "bg-emerald-50 text-emerald-600",
+    border: "border-emerald-100",
+    progress: "bg-emerald-500",
+  },
+  Oylik: {
+    short: "OY",
+    label: "Oylik",
+    accent: "bg-amber-500",
+    accentText: "text-amber-600",
+    badge: "bg-amber-50 text-amber-600",
+    border: "border-amber-100",
+    progress: "bg-amber-500",
+  },
+  Haftalik: {
+    short: "HAFTA",
+    label: "Haftalik",
+    accent: "bg-violet-500",
+    accentText: "text-violet-600",
+    badge: "bg-violet-50 text-violet-600",
+    border: "border-violet-100",
+    progress: "bg-violet-500",
+  },
+  Kunlik: {
+    short: "KUN",
+    label: "Kunlik",
+    accent: "bg-sky-500",
+    accentText: "text-sky-600",
+    badge: "bg-sky-50 text-sky-600",
+    border: "border-sky-100",
+    progress: "bg-sky-500",
+  },
+};
+
+function ProgressBar({ value, className }) {
+  const clamped = Math.max(0, Math.min(100, value));
+
   return (
-    <div className="h-[3px] rounded-full overflow-hidden" style={{ background: "#1d1d1d" }}>
+    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
       <motion.div
-        className="h-full rounded-full"
-        style={{ background: color }}
         initial={{ width: 0 }}
-        animate={{ width: `${Math.min(100, value)}%` }}
-        transition={{ duration: 0.7, ease: "easeOut" }}
+        animate={{ width: `${clamped}%` }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
+        className={cn("h-full rounded-full", className)}
       />
     </div>
   );
 }
 
-function GoalCard({ goal, color, onDelete, onIncrement, onDecrement }) {
-  const progress = goal.targetValue > 0
-    ? Math.round((goal.currentValue / goal.targetValue) * 100)
-    : 0;
-
+function GoalRow({ goal, meta, onDelete, onIncrement, onDecrement }) {
   return (
     <motion.div
+      layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl p-4"
-      style={{ background: "#111" }}
+      exit={{ opacity: 0, y: -8 }}
+      className={cn(
+        "rounded-2xl border bg-white p-4 shadow-sm",
+        meta.border,
+      )}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 pr-3">
-          <p className="text-sm font-bold text-white leading-snug">{goal.title}</p>
-          {goal.deadline && (
-            <p className="text-[10px] mt-1 font-semibold" style={{ color: "#444" }}>
-              Muddat: {new Date(goal.deadline).toLocaleDateString("uz-UZ")}
-            </p>
-          )}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold text-slate-900">{goal.title}</p>
+          <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+            <CalendarDays className="h-3.5 w-3.5" />
+            <span>{goal.deadline ? new Date(goal.deadline).toLocaleDateString("uz-UZ") : "Muddat yo'q"}</span>
+          </div>
         </div>
-        <button
-          onClick={() => onDelete(goal.id)}
-          className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-red-500/10"
-          style={{ color: "#333" }}
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+
+        <div className="flex items-center gap-2">
+          <Badge className={cn("border-0 text-[10px] font-black uppercase tracking-widest", meta.badge)}>
+            {goal.status}
+          </Badge>
+          <button
+            type="button"
+            onClick={() => onDelete(goal.id)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      <ProgressBar value={progress} color={color} />
+      <div className="mt-4 space-y-2">
+        <ProgressBar value={goal.progress} className={meta.progress} />
+        <div className="flex items-center justify-between">
+          <p className={cn("text-xs font-extrabold", meta.accentText)}>
+            {goal.currentValue} / {goal.targetValue}
+          </p>
 
-      <div className="flex items-center justify-between mt-2">
-        <span className="text-xs font-bold" style={{ color }}>
-          {goal.currentValue} / {goal.targetValue}
-        </span>
-        <div className="flex gap-2">
-          <button
-            onClick={() => onDecrement(goal.id)}
-            className="w-7 h-7 rounded-lg text-sm font-black flex items-center justify-center transition-colors hover:bg-white/5"
-            style={{ color: "#444", background: "#1a1a1a" }}
-          >
-            −
-          </button>
-          <button
-            onClick={() => onIncrement(goal.id)}
-            className="w-7 h-7 rounded-lg text-sm font-black flex items-center justify-center transition-all active:scale-90"
-            style={{ color: "#000", background: color }}
-          >
-            +
-          </button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="icon"
+              variant="secondary"
+              className="h-8 w-8"
+              onClick={() => onDecrement(goal.id)}
+            >
+              -
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => onIncrement(goal.id)}
+            >
+              +
+            </Button>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -81,67 +142,77 @@ function GoalCard({ goal, color, onDelete, onIncrement, onDecrement }) {
 
 function PeriodSection({ period, goals, onDelete, onIncrement, onDecrement }) {
   const [open, setOpen] = useState(true);
-  const color = PERIOD_COLOR[period];
+  const meta = PERIOD_META[period];
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: "#0F0F0F", border: "1px solid #1a1a1a" }}>
+    <Card className="overflow-hidden border-slate-200 shadow-sm">
       <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-5 py-4"
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex w-full items-center justify-between px-5 py-4 text-left"
       >
         <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full" style={{ background: color }} />
-          <span className="text-[11px] font-black tracking-[0.3em] uppercase" style={{ color }}>
-            {PERIOD_EN[period]}
-          </span>
-          <span
-            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-            style={{ background: "#1a1a1a", color: "#555" }}
-          >
-            {goals.length}
-          </span>
+          <span className={cn("h-2.5 w-2.5 rounded-full", meta.accent)} />
+          <span className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-500">{meta.short}</span>
+          <Badge className={cn("border-0 text-[10px] font-black", meta.badge)}>{goals.length}</Badge>
         </div>
+
         <ChevronDown
-          className="w-4 h-4 transition-transform duration-200"
-          style={{ color: "#444", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+          className={cn(
+            "h-4 w-4 text-slate-400 transition-transform",
+            open && "rotate-180",
+          )}
         />
       </button>
 
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {open && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 flex flex-col gap-3">
+            <CardContent className="space-y-3 pt-0">
               {goals.length === 0 && (
-                <p className="text-xs text-center py-3" style={{ color: "#333" }}>
+                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-6 text-center text-sm font-medium text-slate-400">
                   Bu davrda maqsad yo'q.
-                </p>
+                </div>
               )}
-              {goals.map((goal) => (
-                <GoalCard
-                  key={goal.id}
-                  goal={goal}
-                  color={color}
-                  onDelete={onDelete}
-                  onIncrement={onIncrement}
-                  onDecrement={onDecrement}
-                />
-              ))}
-            </div>
+
+              <AnimatePresence>
+                {goals.map((goal) => (
+                  <GoalRow
+                    key={goal.id}
+                    goal={goal}
+                    meta={meta}
+                    onDelete={onDelete}
+                    onIncrement={onIncrement}
+                    onDecrement={onDecrement}
+                  />
+                ))}
+              </AnimatePresence>
+            </CardContent>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </Card>
   );
+}
+
+function nextMonthDate() {
+  const date = new Date();
+  date.setMonth(date.getMonth() + 1);
+  return date.toISOString().slice(0, 10);
 }
 
 export default function GoalsPage() {
   const { actions, selectors } = useLifeOSData();
+  const goalsWithMeta = Array.isArray(selectors?.goalsWithMeta)
+    ? selectors.goalsWithMeta
+    : [];
+
   const [title, setTitle] = useState("");
   const [period, setPeriod] = useState("Oylik");
   const [target, setTarget] = useState("10");
@@ -150,23 +221,32 @@ export default function GoalsPage() {
 
   const byPeriod = useMemo(() => {
     const map = { Yillik: [], Oylik: [], Haftalik: [], Kunlik: [] };
-    selectors.goalsWithMeta.forEach((g) => {
-      if (map[g.period]) map[g.period].push(g);
+    goalsWithMeta.forEach((goal) => {
+      if (map[goal.period]) {
+        map[goal.period].push(goal);
+      }
     });
     return map;
-  }, [selectors.goalsWithMeta]);
+  }, [goalsWithMeta]);
 
-  const total = selectors.goalsWithMeta.length;
-  const completed = selectors.goalsWithMeta.filter((g) => g.progress >= 100).length;
+  const total = goalsWithMeta.length;
+  const completed = goalsWithMeta.filter((goal) => goal.progress >= 100).length;
+  const inProgress = Math.max(0, total - completed);
 
-  const addGoal = () => {
-    if (!title.trim()) return;
+  const handleAddGoal = () => {
+    const trimmed = title.trim();
+    const numericTarget = Number(target);
+    if (!trimmed || !Number.isFinite(numericTarget) || numericTarget <= 0) {
+      return;
+    }
+
     actions.addGoal({
-      title: title.trim(),
+      title: trimmed,
       period,
-      targetValue: Number(target) || 10,
-      deadline: deadline || "2026-12-31",
+      targetValue: Math.max(1, Math.round(numericTarget)),
+      deadline: deadline || nextMonthDate(),
     });
+
     setTitle("");
     setTarget("10");
     setDeadline("");
@@ -174,125 +254,145 @@ export default function GoalsPage() {
   };
 
   return (
-    <div
-      className="flex flex-col gap-5 px-4 pt-6 pb-4"
-      style={{ background: "#0B0B0B", minHeight: "100%" }}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-7xl space-y-6">
+      <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-[10px] font-black tracking-[0.35em] uppercase" style={{ color: "#555" }}>
-            PLAN
-          </p>
-          <h1 className="text-2xl font-black tracking-tight mt-0.5">Maqsadlar.</h1>
+          <p className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">Plan</p>
+          <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-900">Maqsadlar</h1>
+          <p className="mt-1 text-sm font-medium text-slate-500">Maqsadlarni period bo'yicha boshqaring va progressni kuzating.</p>
         </div>
-        <button
-          onClick={() => setShowForm((s) => !s)}
-          className="w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90"
-          style={{ background: showForm ? "#1a1a1a" : "#00FFAA", color: showForm ? "#00FFAA" : "#000" }}
+
+        <Button
+          type="button"
+          onClick={() => setShowForm((prev) => !prev)}
+          className="h-11 rounded-xl px-5 font-bold"
         >
-          <Plus className="w-5 h-5" strokeWidth={2.5} />
-        </button>
+          <Plus className="h-4 w-4" />
+          Yangi Maqsad
+        </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: "Jami",      value: total,     color: "#fff" },
-          { label: "Bajarildi", value: completed,  color: "#00FFAA" },
-          { label: "Qoldi",     value: total - completed, color: "#FF3B3B" },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="rounded-2xl p-4" style={{ background: "#111" }}>
-            <p className="text-2xl font-black" style={{ color }}>{value}</p>
-            <p className="text-[10px] font-bold uppercase tracking-wide mt-1" style={{ color: "#444" }}>{label}</p>
-          </div>
-        ))}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card className="border-slate-200 shadow-sm">
+          <CardContent className="pt-6">
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Jami</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">{total}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-emerald-100 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-emerald-600">
+              <CheckCircle2 className="h-4 w-4" />
+              <p className="text-xs font-bold uppercase tracking-widest">Bajarildi</p>
+            </div>
+            <p className="mt-2 text-3xl font-black text-emerald-600">{completed}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-amber-100 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-amber-600">
+              <TrendingUp className="h-4 w-4" />
+              <p className="text-xs font-bold uppercase tracking-widest">Jarayonda</p>
+            </div>
+            <p className="mt-2 text-3xl font-black text-amber-600">{inProgress}</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Add form */}
       <AnimatePresence>
         {showForm && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
           >
-            <div className="rounded-2xl p-5 flex flex-col gap-4" style={{ background: "#111" }}>
-              <p className="text-[10px] font-black tracking-[0.3em] uppercase" style={{ color: "#00FFAA" }}>
-                YANGI MAQSAD
-              </p>
+            <Card className="border-slate-200 shadow-sm">
+              <CardContent className="space-y-4 pt-6">
+                <div className="flex items-center gap-2 text-slate-700">
+                  <Target className="h-4 w-4" />
+                  <p className="text-sm font-black uppercase tracking-widest">Yangi Maqsad</p>
+                </div>
 
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Maqsad nomi..."
-                className="w-full bg-transparent text-sm font-semibold outline-none border-b pb-2 placeholder:font-normal"
-                style={{ borderColor: "#222", color: "#ccc" }}
-              />
-
-              {/* Period selector */}
-              <div className="flex gap-2">
-                {PERIODS.map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPeriod(p)}
-                    className="flex-1 py-2 rounded-xl text-[10px] font-black tracking-wide transition-all"
-                    style={{
-                      background: period === p ? PERIOD_COLOR[p] : "#1a1a1a",
-                      color: period === p ? "#000" : "#444",
-                    }}
-                  >
-                    {PERIOD_EN[p].slice(0, 3)}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: "#444" }}>Maqsad</p>
-                  <input
-                    type="number"
-                    value={target}
-                    onChange={(e) => setTarget(e.target.value)}
-                    className="w-full bg-transparent text-sm font-bold outline-none border-b pb-1"
-                    style={{ borderColor: "#222", color: "#ccc" }}
+                <div className="space-y-2">
+                  <Label htmlFor="goal-title">Maqsad nomi</Label>
+                  <Input
+                    id="goal-title"
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    placeholder="Maqsad nomi..."
                   />
                 </div>
-                <div className="flex-1">
-                  <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: "#444" }}>Muddat</p>
-                  <input
-                    type="date"
-                    value={deadline}
-                    onChange={(e) => setDeadline(e.target.value)}
-                    className="w-full bg-transparent text-sm font-bold outline-none border-b pb-1"
-                    style={{ borderColor: "#222", color: "#ccc", colorScheme: "dark" }}
-                  />
-                </div>
-              </div>
 
-              <button
-                onClick={addGoal}
-                className="w-full py-3.5 rounded-xl font-black text-sm tracking-widest uppercase transition-all active:scale-98"
-                style={{ background: "#00FFAA", color: "#000" }}
-              >
-                QO'SHISH
-              </button>
-            </div>
+                <div className="grid gap-3 sm:grid-cols-4">
+                  {PERIODS.map((item) => {
+                    const active = period === item;
+                    const meta = PERIOD_META[item];
+
+                    return (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => setPeriod(item)}
+                        className={cn(
+                          "rounded-xl border px-3 py-2 text-xs font-black uppercase tracking-wider transition",
+                          active
+                            ? cn(meta.badge, "border-transparent")
+                            : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50",
+                        )}
+                      >
+                        {meta.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="goal-target">Target qiymat</Label>
+                    <Input
+                      id="goal-target"
+                      type="number"
+                      min="1"
+                      value={target}
+                      onChange={(event) => setTarget(event.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="goal-deadline">Muddat</Label>
+                    <Input
+                      id="goal-deadline"
+                      type="date"
+                      value={deadline}
+                      onChange={(event) => setDeadline(event.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                    Bekor qilish
+                  </Button>
+                  <Button type="button" onClick={handleAddGoal}>
+                    Qo'shish
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Period sections */}
-      <div className="flex flex-col gap-3">
-        {PERIODS.map((p) => (
+      <div className="space-y-4">
+        {PERIODS.map((item) => (
           <PeriodSection
-            key={p}
-            period={p}
-            goals={byPeriod[p]}
-            onDelete={actions.deleteGoal}
-            onIncrement={(id) => actions.incrementGoal(id, 1)}
-            onDecrement={(id) => actions.incrementGoal(id, -1)}
+            key={item}
+            period={item}
+            goals={byPeriod[item]}
+            onDelete={actions.removeGoal}
+            onIncrement={(id) => actions.updateGoalProgress(id, 1)}
+            onDecrement={(id) => actions.updateGoalProgress(id, -1)}
           />
         ))}
       </div>

@@ -3,13 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLifeOSData } from "@/lib/lifeos-store";
 import { Send, Trash2, Zap } from "lucide-react";
 
-const QUICK_PROMPTS = [
-  "Bugungi rejam qanday?",
-  "Nima orqada qoldim?",
-  "Motivatsiya ber.",
-  "Progress tahlil qil.",
-];
-
 function Message({ msg }) {
   const isUser = msg.role === "user";
   return (
@@ -45,6 +38,14 @@ export default function AssistantPage() {
   const [prompt, setPrompt] = useState("");
   const endRef = useRef(null);
   const messages = data.assistant.messages ?? [];
+  const quickPrompts = Array.isArray(data.content?.assistant?.quickPrompts)
+    ? data.content.assistant.quickPrompts
+    : [
+        "Bugungi rejam qanday?",
+        "Nima orqada qoldim?",
+        "Motivatsiya ber.",
+        "Progress tahlil qil.",
+      ];
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -107,7 +108,7 @@ export default function AssistantPage() {
       {/* Quick prompts */}
       {messages.length === 0 && (
         <div className="px-4 pb-2 flex gap-2 overflow-x-auto">
-          {QUICK_PROMPTS.map((q) => (
+          {quickPrompts.map((q) => (
             <button
               key={q}
               onClick={() => send(q)}

@@ -32,11 +32,14 @@ import {
   AddTaskDto,
   AmountDto,
   AssistantPromptDto,
+  CreateCommunityPostDto,
   CreateBookDto,
   CreateGoalDto,
   CreateHabitDto,
+  ForgotPasswordDto,
   GoogleAuthDto,
   LoginDto,
+  ResetPasswordDto,
   RefreshTokenDto,
   RegisterDto,
   SendNetworkMessageDto,
@@ -46,6 +49,7 @@ import {
   UpdateBookPagesDto,
   UpdateGoalProgressDto,
   UpdateLanguageDto,
+  VerifyResetCodeDto,
 } from "./dto";
 import { AccessTokenPayload } from "./types";
 
@@ -181,6 +185,125 @@ const PUBLIC_CONTENT_SCHEMA = {
       type: "object",
       additionalProperties: true,
     },
+  },
+};
+
+const FINANCE_OVERVIEW_SCHEMA = {
+  type: "object",
+  required: [
+    "wealthScore",
+    "monthlyGrowthPct",
+    "debtCurrent",
+    "debtTarget",
+    "debtPlanHint",
+    "savingsCurrent",
+    "savingsTarget",
+    "income",
+    "expense",
+    "investments",
+  ],
+  properties: {
+    wealthScore: { type: "number", example: 92 },
+    monthlyGrowthPct: { type: "number", example: 12.4 },
+    debtCurrent: { type: "number", example: 4200 },
+    debtTarget: { type: "number", example: 15000 },
+    debtPlanHint: {
+      type: "string",
+      example: "Snowball usuli orqali qarzlarni 4 oyda yopishingiz mumkin.",
+    },
+    savingsCurrent: { type: "number", example: 3450 },
+    savingsTarget: { type: "number", example: 6000 },
+    income: { type: "number", example: 4200 },
+    expense: { type: "number", example: 1800 },
+    investments: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["label", "val", "stat"],
+        properties: {
+          label: { type: "string", example: "S&P 500" },
+          val: { type: "string", example: "+8.4%" },
+          stat: { type: "string", example: "Profit" },
+        },
+      },
+    },
+  },
+};
+
+const COMMUNITY_POST_SCHEMA = {
+  type: "object",
+  required: ["id", "user", "role", "category", "text", "likes", "comments", "createdAt"],
+  properties: {
+    id: { type: "number", example: 4 },
+    user: { type: "string", example: "Demo" },
+    role: { type: "string", enum: ["Admin", "User"], example: "Admin" },
+    category: {
+      type: "string",
+      enum: ["Moliya", "Sog'liq", "Unumdorlik", "Bilim", "Umumiy"],
+      example: "Moliya",
+    },
+    text: { type: "string", example: "Bugungi reja bo'yicha update." },
+    likes: { type: "number", example: 0 },
+    comments: { type: "number", example: 0 },
+    createdAt: {
+      type: "string",
+      format: "date-time",
+      example: "2026-04-10T17:00:00.000Z",
+    },
+  },
+};
+
+const COMMUNITY_FEED_SCHEMA = {
+  type: "array",
+  items: COMMUNITY_POST_SCHEMA,
+};
+
+const ASSISTANT_SLICE_SCHEMA = {
+  type: "object",
+  required: ["messages", "nextId"],
+  properties: {
+    messages: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["id", "role", "text"],
+        properties: {
+          id: { type: "number", example: 1 },
+          role: { type: "string", enum: ["assistant", "user"], example: "assistant" },
+          text: { type: "string", example: "Assalomu alaykum." },
+        },
+      },
+    },
+    nextId: { type: "number", example: 2 },
+  },
+};
+
+const PASSWORD_RESET_ACK_SCHEMA = {
+  type: "object",
+  required: ["accepted"],
+  properties: {
+    accepted: { type: "boolean", example: true },
+  },
+};
+
+const PASSWORD_RESET_VERIFY_SCHEMA = {
+  type: "object",
+  required: ["valid", "expiresAt"],
+  properties: {
+    valid: { type: "boolean", example: true },
+    expiresAt: {
+      type: "string",
+      format: "date-time",
+      example: "2026-04-11T20:30:00.000Z",
+    },
+  },
+};
+
+const PASSWORD_RESET_DONE_SCHEMA = {
+  type: "object",
+  required: ["reset"],
+  properties: {
+    reset: { type: "boolean", example: true },
   },
 };
 
@@ -334,6 +457,51 @@ export class AppController {
     return this.appService.refreshAccessToken(dto);
   }
 
+  @Public()
+  @Post("auth/password/forgot")
+  @HttpCode(200)
+  @ApiTags("Auth")
+  @ApiOperation({
+    summary: "Send one-time password reset code to user's email",
+  })
+  @ApiSuccess({
+    message:
+      "Agar email tizimda mavjud bo'lsa, parolni tiklash kodi email manzilga yuborildi.",
+    dataSchema: PASSWORD_RESET_ACK_SCHEMA,
+  })
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.appService.requestPasswordReset(dto);
+  }
+
+  @Public()
+  @Post("auth/password/verify")
+  @HttpCode(200)
+  @ApiTags("Auth")
+  @ApiOperation({ summary: "Verify password reset code" })
+  @ApiSuccess({
+    message: "Tasdiqlash kodi yaroqli.",
+    dataSchema: PASSWORD_RESET_VERIFY_SCHEMA,
+  })
+  verifyPasswordResetCode(@Body() dto: VerifyResetCodeDto) {
+    return this.appService.verifyPasswordResetCode(dto);
+  }
+
+  @Public()
+  @Post("auth/password/reset")
+  @HttpCode(200)
+  @ApiTags("Auth")
+  @ApiOperation({
+    summary:
+      "Reset password using one-time code and invalidate all active sessions",
+  })
+  @ApiSuccess({
+    message: "Parol muvaffaqiyatli yangilandi. Qayta login qiling.",
+    dataSchema: PASSWORD_RESET_DONE_SCHEMA,
+  })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.appService.resetPassword(dto);
+  }
+
   @Get("auth/me")
   @ApiTags("Auth")
   @ApiOperation({ summary: "Get current user profile by access token" })
@@ -370,6 +538,50 @@ export class AppController {
   @ApiSuccess({ message: "Dashboard umumiy statistikasi olindi.", auth: true })
   dashboardSummary() {
     return this.appService.getDashboardSummary();
+  }
+
+  @Get("finance/overview")
+  @ApiTags("Finance")
+  @ApiOperation({ summary: "Get finance overview data" })
+  @ApiSuccess({
+    message: "Moliya markazi ma'lumotlari olindi.",
+    auth: true,
+    dataSchema: FINANCE_OVERVIEW_SCHEMA,
+  })
+  getFinanceOverview() {
+    return this.appService.getFinanceOverview();
+  }
+
+  @Get("community/feed")
+  @ApiTags("Community")
+  @ApiOperation({ summary: "Get community feed" })
+  @ApiSuccess({
+    message: "Community feed muvaffaqiyatli olindi.",
+    auth: true,
+    dataSchema: COMMUNITY_FEED_SCHEMA,
+  })
+  getCommunityFeed() {
+    return this.appService.getCommunityFeed();
+  }
+
+  @Post("community/feed")
+  @ApiTags("Community")
+  @ApiOperation({ summary: "Create a community post" })
+  @ApiSuccess({
+    message: "Community post muvaffaqiyatli qo'shildi.",
+    status: 201,
+    auth: true,
+    dataSchema: COMMUNITY_FEED_SCHEMA,
+  })
+  createCommunityPost(
+    @Body() dto: CreateCommunityPostDto,
+    @Req() request: { user?: AccessTokenPayload },
+  ) {
+    const actorUserId = request.user?.sub;
+    if (!actorUserId) {
+      throw new BadRequestException("User aniqlanmadi.");
+    }
+    return this.appService.createCommunityPost(actorUserId, dto);
   }
 
   @Post("dashboard/tasks")
@@ -587,6 +799,18 @@ export class AppController {
   @ApiSuccess({ message: "Xabar yuborildi.", status: 201, auth: true })
   sendNetworkMessage(@Body() dto: SendNetworkMessageDto) {
     return this.appService.sendNetworkMessage(dto);
+  }
+
+  @Get("assistant")
+  @ApiTags("Assistant")
+  @ApiOperation({ summary: "Get assistant slice (messages + nextId)" })
+  @ApiSuccess({
+    message: "Assistant slice muvaffaqiyatli olindi.",
+    auth: true,
+    dataSchema: ASSISTANT_SLICE_SCHEMA,
+  })
+  getAssistant() {
+    return this.appService.getAssistant();
   }
 
   @Get("assistant/messages")

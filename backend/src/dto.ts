@@ -1,11 +1,13 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
   IsBoolean,
   IsEmail,
   IsIn,
   IsInt,
   IsNumber,
+  IsOptional,
   IsString,
+  MaxLength,
   Max,
   Min,
   MinLength,
@@ -88,6 +90,31 @@ export class RefreshTokenDto {
   @IsString()
   @MinLength(16)
   refreshToken!: string;
+}
+
+export class ForgotPasswordDto {
+  @ApiProperty({ example: "muhammadnurullohergashev@gmail.com" })
+  @IsEmail()
+  email!: string;
+}
+
+export class VerifyResetCodeDto {
+  @ApiProperty({ example: "muhammadnurullohergashev@gmail.com" })
+  @IsEmail()
+  email!: string;
+
+  @ApiProperty({ example: "482915", minLength: 4, maxLength: 8 })
+  @IsString()
+  @MinLength(4)
+  @MaxLength(8)
+  code!: string;
+}
+
+export class ResetPasswordDto extends VerifyResetCodeDto {
+  @ApiProperty({ example: "StrongPassword2026", minLength: 8 })
+  @IsString()
+  @MinLength(8)
+  newPassword!: string;
 }
 
 export class AddTaskDto {
@@ -237,4 +264,19 @@ export class ToggleByKeyDto {
   @ApiProperty()
   @IsString()
   key!: string;
+}
+
+export class CreateCommunityPostDto {
+  @ApiProperty({ minLength: 1 })
+  @IsString()
+  @MinLength(1)
+  text!: string;
+
+  @ApiPropertyOptional({
+    enum: ["Moliya", "Sog'liq", "Unumdorlik", "Bilim", "Umumiy"],
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(["Moliya", "Sog'liq", "Unumdorlik", "Bilim", "Umumiy"])
+  category?: "Moliya" | "Sog'liq" | "Unumdorlik" | "Bilim" | "Umumiy";
 }

@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,13 +9,15 @@ import {
   isAuthenticated,
   loginUser,
   loginWithGoogle,
+  requestPasswordResetCode,
   registerUser,
+  resetPasswordWithCode,
   saveAuthSession,
+  verifyPasswordResetCode,
 } from "@/lib/auth";
 import { GoogleLogin } from "@react-oauth/google";
 import {
   ArrowLeft,
-  AtSign,
   Eye,
   EyeOff,
   Sparkles,
@@ -67,6 +68,26 @@ const registerSchema = loginSchema
     path: ["confirmPassword"],
   });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Email noto'g'ri formatda."),
+});
+
+const resetPasswordSchema = z
+  .object({
+    email: z.string().email("Email noto'g'ri formatda."),
+    code: z
+      .string()
+      .regex(/^\d{6}$/, "Tasdiqlash kodi 6 xonali raqam bo'lishi kerak."),
+    newPassword: z.string().min(8, "Yangi parol kamida 8 ta belgidan iborat bo'lsin."),
+    confirmNewPassword: z
+      .string()
+      .min(8, "Parol tasdiqlash maydoni to'ldirilishi kerak."),
+  })
+  .refine((payload) => payload.newPassword === payload.confirmNewPassword, {
+    message: "Yangi parollar mos emas.",
+    path: ["confirmNewPassword"],
+  });
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -85,6 +106,29 @@ const FEATURES = [
   { icon: TrendingUp, label: "Tahlil", color: "text-cyan-400" },
   { icon: Shield, label: "Xavfsiz", color: "text-rose-400" },
 ];
+
+function GoogleIcon({ className = "h-4 w-4" }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className={className}>
+      <path
+        fill="#4285F4"
+        d="M23.49 12.27c0-.79-.07-1.54-.2-2.27H12v4.3h6.44a5.5 5.5 0 0 1-2.39 3.61v2.99h3.86c2.26-2.08 3.58-5.14 3.58-8.63z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.24 0 5.95-1.07 7.94-2.9l-3.86-2.99c-1.07.72-2.44 1.14-4.08 1.14-3.13 0-5.78-2.11-6.73-4.96H1.28v3.11A11.99 11.99 0 0 0 12 24z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.27 14.29a7.22 7.22 0 0 1 0-4.58V6.6H1.28a12 12 0 0 0 0 10.8l3.99-3.11z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 4.75c1.76 0 3.35.61 4.59 1.79l3.44-3.44C17.95 1.16 15.24 0 12 0A11.99 11.99 0 0 0 1.28 6.6l3.99 3.11c.95-2.85 3.6-4.96 6.73-4.96z"
+      />
+    </svg>
+  );
+}
 
 export default function AuthPage() {
   const { t } = useTranslation();
@@ -109,6 +153,13 @@ export default function AuthPage() {
     password: "",
     confirmPassword: "",
   });
+  const [resetStep, setResetStep] = useState("hidden");
+  const [resetForm, setResetForm] = useState({
+    email: "",
+    code: "",
+    newPassword: "",
+    confirmNewPassword: "",
+  });
 
   useEffect(() => {
     if (isAuthenticated()) {
@@ -124,6 +175,7 @@ export default function AuthPage() {
     const emailFromQuery = searchParams.get("email");
     if (!emailFromQuery) return;
     setForm((prev) => ({ ...prev, email: prev.email || emailFromQuery }));
+    setResetForm((prev) => ({ ...prev, email: prev.email || emailFromQuery }));
   }, [searchParams]);
 
   useEffect(() => {
@@ -138,25 +190,49 @@ export default function AuthPage() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
-  const formTitle = useMemo(
-    () => (tab === "login" ? t("auth.login") : t("auth.register")),
-    [tab, t],
-  );
+  const formTitle = useMemo(() => {
+    if (tab === "login" && resetStep === "request") {
+      return "Parolni tiklash";
+    }
+    if (tab === "login" && resetStep === "confirm") {
+      return "Kodni tasdiqlash";
+    }
+    return tab === "login" ? t("auth.login") : t("auth.register");
+  }, [tab, resetStep, t]);
 
   const updateField = (field) => (event) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
   };
 
+  const updateResetField = (field) => (event) => {
+    setResetForm((prev) => ({ ...prev, [field]: event.target.value }));
+  };
+
   const switchTab = (nextTab) => {
     setTab(nextTab);
+    setResetStep("hidden");
     setSearchParams({ tab: nextTab });
   };
 
-  const handleSocialLoginPlaceholder = (provider) => {
-    toast({
-      title: `${provider}`,
-      description: `${provider} ${t("auth.messages.social_hint")}`,
-    });
+  const openPasswordReset = () => {
+    setResetStep("request");
+    setResetForm((prev) => ({
+      ...prev,
+      email: prev.email || form.email,
+      code: "",
+      newPassword: "",
+      confirmNewPassword: "",
+    }));
+  };
+
+  const closePasswordReset = () => {
+    setResetStep("hidden");
+    setResetForm((prev) => ({
+      ...prev,
+      code: "",
+      newPassword: "",
+      confirmNewPassword: "",
+    }));
   };
 
   const handleGoogleAuth = async (credentialResponse) => {
@@ -196,6 +272,137 @@ export default function AuthPage() {
       description: "Dashboard sahifasiga yo'naltirilyapsiz.",
     });
     navigate("/dashboard", { replace: true });
+  };
+
+  const handleForgotPasswordSubmit = async (event) => {
+    event.preventDefault();
+    const parsed = forgotPasswordSchema.safeParse({
+      email: resetForm.email,
+    });
+
+    if (!parsed.success) {
+      toast({
+        variant: "destructive",
+        title: "Validatsiya xatoligi",
+        description: parsed.error.issues[0]?.message ?? "Emailni tekshiring.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    const result = await requestPasswordResetCode(parsed.data.email);
+    setIsLoading(false);
+
+    if (!result.ok) {
+      toast({
+        variant: "destructive",
+        title: "Kod yuborilmadi",
+        description: result.message,
+      });
+      return;
+    }
+
+    setResetStep("confirm");
+    toast({
+      title: "Agar email tizimda bo'lsa, kod yuborildi",
+      description: "Emailingizni tekshirib, tasdiqlash kodini kiriting.",
+    });
+  };
+
+  const handleResetPasswordSubmit = async (event) => {
+    event.preventDefault();
+    const parsed = resetPasswordSchema.safeParse(resetForm);
+
+    if (!parsed.success) {
+      toast({
+        variant: "destructive",
+        title: "Validatsiya xatoligi",
+        description: parsed.error.issues[0]?.message ?? "Maydonlarni tekshiring.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    const verifyResult = await verifyPasswordResetCode({
+      email: parsed.data.email,
+      code: parsed.data.code,
+    });
+    if (!verifyResult.ok) {
+      setIsLoading(false);
+      toast({
+        variant: "destructive",
+        title: "Tasdiqlash kodi xato",
+        description: verifyResult.message,
+      });
+      return;
+    }
+
+    const resetResult = await resetPasswordWithCode({
+      email: parsed.data.email,
+      code: parsed.data.code,
+      newPassword: parsed.data.newPassword,
+    });
+    setIsLoading(false);
+
+    if (!resetResult.ok) {
+      toast({
+        variant: "destructive",
+        title: "Parolni yangilab bo'lmadi",
+        description: resetResult.message,
+      });
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      email: parsed.data.email,
+      password: "",
+      confirmPassword: "",
+    }));
+    setResetForm((prev) => ({
+      ...prev,
+      code: "",
+      newPassword: "",
+      confirmNewPassword: "",
+    }));
+    setResetStep("hidden");
+    toast({
+      title: "Parol muvaffaqiyatli yangilandi",
+      description: "Endi yangi parol bilan tizimga kiring.",
+    });
+  };
+
+  const handleResendResetCode = async () => {
+    const parsed = forgotPasswordSchema.safeParse({
+      email: resetForm.email,
+    });
+
+    if (!parsed.success) {
+      toast({
+        variant: "destructive",
+        title: "Email noto'g'ri",
+        description: parsed.error.issues[0]?.message ?? "Emailni tekshiring.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    const result = await requestPasswordResetCode(parsed.data.email);
+    setIsLoading(false);
+
+    if (!result.ok) {
+      toast({
+        variant: "destructive",
+        title: "Kod qayta yuborilmadi",
+        description: result.message,
+      });
+      return;
+    }
+
+    toast({
+      title: "Kod qayta yuborildi",
+      description: "Emailingizni tekshirib, yangi kodni kiriting.",
+    });
   };
 
   const handleSubmit = async (event) => {
@@ -434,196 +641,365 @@ export default function AuthPage() {
               >
                 {formTitle}
               </motion.h2>
-              <p className="mt-1.5 text-sm text-slate-400">{t("auth.form_hint")}</p>
+              <p className="mt-1.5 text-sm text-slate-400">
+                {tab === "login" && resetStep !== "hidden"
+                  ? "Emailga yuborilgan bir martalik kod bilan parolni yangilang."
+                  : t("auth.form_hint")}
+              </p>
             </div>
 
             {/* Form */}
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              <AnimatePresence mode="wait">
-                {tab === "register" && (
-                  <motion.div
-                    key="register-fields"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.25, ease: "easeInOut" }}
-                    className="overflow-hidden"
+            {tab === "login" && resetStep !== "hidden" ? (
+              <form
+                className="space-y-4"
+                onSubmit={
+                  resetStep === "request"
+                    ? handleForgotPasswordSubmit
+                    : handleResetPasswordSubmit
+                }
+              >
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="reset-email"
+                    className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
                   >
-                    <div className="grid gap-3 md:grid-cols-2 pb-1">
-                      {[
-                        { id: "auth-firstname", field: "firstName", label: t("auth.labels.firstName"), autoComplete: "given-name", span: 1 },
-                        { id: "auth-lastname", field: "lastName", label: t("auth.labels.lastName"), autoComplete: "family-name", span: 1 },
-                        { id: "auth-phone", field: "phone", label: t("auth.labels.phone"), autoComplete: "tel", span: 1 },
-                        { id: "auth-profession", field: "profession", label: t("auth.labels.profession"), span: 1 },
-                        { id: "auth-address", field: "address", label: t("auth.labels.address"), autoComplete: "street-address", span: 2 },
-                        { id: "auth-region", field: "region", label: t("auth.labels.region"), span: 1 },
-                        { id: "auth-city", field: "city", label: t("auth.labels.city"), span: 1 },
-                        { id: "auth-district", field: "district", label: t("auth.labels.district"), span: 2 },
-                      ].map(({ id, field, label, autoComplete, span }) => (
-                        <div key={id} className={cn("space-y-1.5", span === 2 && "md:col-span-2")}>
-                          <Label htmlFor={id} className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                            {label}
-                          </Label>
-                          <Input
-                            id={id}
-                            value={form[field]}
-                            onChange={updateField(field)}
-                            autoComplete={autoComplete}
-                            disabled={isLoading}
-                            className="h-11 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 font-medium px-4 transition-all"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Email */}
-              <div className="space-y-1.5">
-                <Label htmlFor="auth-email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                  {t("auth.labels.email")}
-                </Label>
-                <Input
-                  id="auth-email"
-                  type="email"
-                  value={form.email}
-                  onChange={updateField("email")}
-                  className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 font-medium px-4 transition-all"
-                  autoComplete="email"
-                  disabled={isLoading}
-                />
-              </div>
-
-              {/* Password */}
-              <div className="space-y-1.5">
-                <Label htmlFor="auth-password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                  {t("auth.labels.password")}
-                </Label>
-                <div className="relative">
+                    {t("auth.labels.email")}
+                  </Label>
                   <Input
-                    id="auth-password"
-                    type={showPassword ? "text" : "password"}
-                    value={form.password}
-                    onChange={updateField("password")}
-                    onFocus={() => setIsPasswordFocused(true)}
-                    onBlur={() => setIsPasswordFocused(false)}
-                    className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 font-medium px-4 pr-12 transition-all"
-                    autoComplete={tab === "login" ? "current-password" : "new-password"}
+                    id="reset-email"
+                    type="email"
+                    value={resetForm.email}
+                    onChange={updateResetField("email")}
+                    className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 font-medium px-4 transition-all"
+                    autoComplete="email"
                     disabled={isLoading}
                   />
+                </div>
+
+                {resetStep === "confirm" && (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="reset-code"
+                        className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
+                      >
+                        Tasdiqlash kodi
+                      </Label>
+                      <Input
+                        id="reset-code"
+                        value={resetForm.code}
+                        onChange={updateResetField("code")}
+                        className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 font-medium px-4 tracking-[0.3em] text-center transition-all"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="000000"
+                        disabled={isLoading}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="reset-password"
+                        className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
+                      >
+                        Yangi parol
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="reset-password"
+                          type={showPassword ? "text" : "password"}
+                          value={resetForm.newPassword}
+                          onChange={updateResetField("newPassword")}
+                          onFocus={() => setIsPasswordFocused(true)}
+                          onBlur={() => setIsPasswordFocused(false)}
+                          className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 font-medium px-4 pr-12 transition-all"
+                          autoComplete="new-password"
+                          disabled={isLoading}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((p) => !p)}
+                          className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="reset-confirm-password"
+                        className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
+                      >
+                        Yangi parolni tasdiqlang
+                      </Label>
+                      <Input
+                        id="reset-confirm-password"
+                        type={showPassword ? "text" : "password"}
+                        value={resetForm.confirmNewPassword}
+                        onChange={updateResetField("confirmNewPassword")}
+                        onFocus={() => setIsPasswordFocused(true)}
+                        onBlur={() => setIsPasswordFocused(false)}
+                        className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 font-medium px-4 transition-all"
+                        autoComplete="new-password"
+                        disabled={isLoading}
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="pt-1">
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="h-12 w-full rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-lg shadow-indigo-500/25 text-sm transition-all duration-200 active:scale-[0.98]"
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {t("auth.buttons.loading")}
+                      </span>
+                    ) : resetStep === "request" ? (
+                      "Kod yuborish"
+                    ) : (
+                      "Parolni yangilash"
+                    )}
+                  </Button>
+                </div>
+
+                <div className="flex items-center justify-between text-xs pt-1">
+                  {resetStep === "confirm" ? (
+                    <button
+                      type="button"
+                      onClick={handleResendResetCode}
+                      disabled={isLoading}
+                      className="font-semibold text-indigo-600 hover:text-indigo-500 disabled:opacity-60"
+                    >
+                      Kodni qayta yuborish
+                    </button>
+                  ) : (
+                    <span />
+                  )}
                   <button
                     type="button"
-                    onClick={() => setShowPassword((p) => !p)}
-                    className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                    onClick={closePasswordReset}
+                    disabled={isLoading}
+                    className="font-semibold text-slate-500 hover:text-slate-700 disabled:opacity-60"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    Bekor qilish
                   </button>
                 </div>
-              </div>
+              </form>
+            ) : (
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                <AnimatePresence mode="wait">
+                  {tab === "register" && (
+                    <motion.div
+                      key="register-fields"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.25, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <div className="grid gap-3 md:grid-cols-2 pb-1">
+                        {[
+                          { id: "auth-firstname", field: "firstName", label: t("auth.labels.firstName"), autoComplete: "given-name", span: 1 },
+                          { id: "auth-lastname", field: "lastName", label: t("auth.labels.lastName"), autoComplete: "family-name", span: 1 },
+                          { id: "auth-phone", field: "phone", label: t("auth.labels.phone"), autoComplete: "tel", span: 1 },
+                          { id: "auth-profession", field: "profession", label: t("auth.labels.profession"), span: 1 },
+                          { id: "auth-address", field: "address", label: t("auth.labels.address"), autoComplete: "street-address", span: 2 },
+                          { id: "auth-region", field: "region", label: t("auth.labels.region"), span: 1 },
+                          { id: "auth-city", field: "city", label: t("auth.labels.city"), span: 1 },
+                          { id: "auth-district", field: "district", label: t("auth.labels.district"), span: 2 },
+                        ].map(({ id, field, label, autoComplete, span }) => (
+                          <div
+                            key={id}
+                            className={cn("space-y-1.5", span === 2 && "md:col-span-2")}
+                          >
+                            <Label
+                              htmlFor={id}
+                              className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
+                            >
+                              {label}
+                            </Label>
+                            <Input
+                              id={id}
+                              value={form[field]}
+                              onChange={updateField(field)}
+                              autoComplete={autoComplete}
+                              disabled={isLoading}
+                              className="h-11 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 font-medium px-4 transition-all"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-              {/* Confirm password (register only) */}
-              <AnimatePresence mode="wait">
-                {tab === "register" && (
-                  <motion.div
-                    key="confirm-password"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden space-y-1.5"
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="auth-email"
+                    className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
                   >
-                    <Label htmlFor="auth-confirm-password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                      {t("auth.labels.confirmPassword")}
-                    </Label>
+                    {t("auth.labels.email")}
+                  </Label>
+                  <Input
+                    id="auth-email"
+                    type="email"
+                    value={form.email}
+                    onChange={updateField("email")}
+                    className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 font-medium px-4 transition-all"
+                    autoComplete="email"
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="auth-password"
+                    className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
+                  >
+                    {t("auth.labels.password")}
+                  </Label>
+                  <div className="relative">
                     <Input
-                      id="auth-confirm-password"
+                      id="auth-password"
                       type={showPassword ? "text" : "password"}
-                      value={form.confirmPassword}
-                      onChange={updateField("confirmPassword")}
+                      value={form.password}
+                      onChange={updateField("password")}
                       onFocus={() => setIsPasswordFocused(true)}
                       onBlur={() => setIsPasswordFocused(false)}
-                      className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 font-medium px-4 transition-all"
-                      autoComplete="new-password"
+                      className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 font-medium px-4 pr-12 transition-all"
+                      autoComplete={tab === "login" ? "current-password" : "new-password"}
                       disabled={isLoading}
                     />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((p) => !p)}
+                      className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
 
-              {/* Submit button */}
-              <div className="pt-1">
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="h-12 w-full rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-lg shadow-indigo-500/25 text-sm transition-all duration-200 active:scale-[0.98]"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {t("auth.buttons.loading")}
-                    </span>
-                  ) : tab === "login" ? (
-                    t("auth.buttons.login")
-                  ) : (
-                    t("auth.buttons.register")
+                {tab === "login" && (
+                  <div className="flex justify-end pt-0.5">
+                    <button
+                      type="button"
+                      onClick={openPasswordReset}
+                      disabled={isLoading}
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-500 disabled:opacity-60"
+                    >
+                      Parolni unutdingizmi?
+                    </button>
+                  </div>
+                )}
+
+                <AnimatePresence mode="wait">
+                  {tab === "register" && (
+                    <motion.div
+                      key="confirm-password"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden space-y-1.5"
+                    >
+                      <Label
+                        htmlFor="auth-confirm-password"
+                        className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
+                      >
+                        {t("auth.labels.confirmPassword")}
+                      </Label>
+                      <Input
+                        id="auth-confirm-password"
+                        type={showPassword ? "text" : "password"}
+                        value={form.confirmPassword}
+                        onChange={updateField("confirmPassword")}
+                        onFocus={() => setIsPasswordFocused(true)}
+                        onBlur={() => setIsPasswordFocused(false)}
+                        className="h-12 rounded-xl bg-slate-50 border-0 ring-1 ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 font-medium px-4 transition-all"
+                        autoComplete="new-password"
+                        disabled={isLoading}
+                      />
+                    </motion.div>
                   )}
-                </Button>
-              </div>
-            </form>
+                </AnimatePresence>
+
+                <div className="pt-1">
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="h-12 w-full rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-lg shadow-indigo-500/25 text-sm transition-all duration-200 active:scale-[0.98]"
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {t("auth.buttons.loading")}
+                      </span>
+                    ) : tab === "login" ? (
+                      t("auth.buttons.login")
+                    ) : (
+                      t("auth.buttons.register")
+                    )}
+                  </Button>
+                </div>
+              </form>
+            )}
 
             {/* Social logins */}
-            <div className="pt-1 border-t border-slate-100">
-              <p className="text-center text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-4">
-                yoki davom eting
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  variant="outline"
-                  className="h-11 w-full rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold transition-all"
-                  onClick={() => handleSocialLoginPlaceholder("Github")}
-                  type="button"
-                >
-                  <AtSign className="h-4 w-4 mr-2" />
-                  Github
-                </Button>
-                {GOOGLE_CLIENT_ID ? (
-                  <div className="flex h-11 w-full items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors">
-                    <GoogleLogin
-                      onSuccess={handleGoogleAuth}
-                      onError={() => {
+            {!(tab === "login" && resetStep !== "hidden") && (
+              <div className="pt-1 border-t border-slate-100">
+                <p className="text-center text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-4">
+                  yoki davom eting
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {GOOGLE_CLIENT_ID ? (
+                    <div className="w-full">
+                      <GoogleLogin
+                        onSuccess={handleGoogleAuth}
+                        onError={() => {
+                          toast({
+                            variant: "destructive",
+                            title: "Google auth xatosi",
+                            description:
+                              "Google orqali kirishni hozir yakunlab bo'lmadi. Qayta urinib ko'ring.",
+                          });
+                        }}
+                        text={tab === "login" ? "signin_with" : "signup_with"}
+                        theme="outline"
+                        shape="rectangular"
+                        size="large"
+                        width="100%"
+                      />
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="h-11 w-full rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold transition-all"
+                      onClick={() =>
                         toast({
                           variant: "destructive",
-                          title: "Google auth xatosi",
-                          description:
-                            "Google orqali kirishni hozir yakunlab bo'lmadi. Qayta urinib ko'ring.",
-                        });
-                      }}
-                      text={tab === "login" ? "signin_with" : "signup_with"}
-                      theme="outline"
-                      shape="rectangular"
-                      size="large"
-                      width="360"
-                    />
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    className="h-11 w-full rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold transition-all"
-                    onClick={() =>
-                      toast({
-                        variant: "destructive",
-                        title: "Google orqali kirish hozircha mavjud emas",
-                        description: "Iltimos, birozdan keyin qayta urinib ko'ring.",
-                      })
-                    }
-                    type="button"
-                  >
-                    Google bilan davom etish
-                  </Button>
-                )}
+                          title: "Google orqali kirish hozircha mavjud emas",
+                          description: "Iltimos, birozdan keyin qayta urinib ko'ring.",
+                        })
+                      }
+                      type="button"
+                    >
+                      <GoogleIcon className="h-4 w-4 mr-2" />
+                      Google bilan davom etish
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

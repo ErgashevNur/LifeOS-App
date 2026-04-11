@@ -110,11 +110,29 @@ export default function DashboardPage() {
   const session = getAuthSession();
   const [newGoal, setNewGoal] = useState("");
   const [newComment, setNewComment] = useState("");
-  const [comments, setComments] = useState([
-    { id: 1, user: "Asadbek", avatar: "A", color: "#7C3AED", text: "Maqsadlarga yetish uchun reja eng muhimi!", time: "2m ago" },
-    { id: 2, user: "Muhammad", avatar: "M", color: "#3B82F6", text: "LifeOS'dagi moliya markazi juda foydali bo'libdi.", time: "10m ago" },
-    { id: 3, user: "Sardor", avatar: "S", color: "#10B981", text: "Odatlar bo'limini kunlik ishlataman, juda qulay!", time: "25m ago" },
-  ]);
+  const comments = (Array.isArray(data.community?.feed) ? data.community.feed : [])
+    .slice(0, 12)
+    .map((item) => ({
+      id: item.id,
+      user: item.user,
+      avatar: (item.user ?? "S").slice(0, 1).toUpperCase(),
+      color:
+        item.category === "Moliya"
+          ? "#10B981"
+          : item.category === "Sog'liq"
+            ? "#EF4444"
+            : item.category === "Bilim"
+              ? "#06B6D4"
+              : "#7C3AED",
+      text: item.text,
+      time:
+        typeof item.createdAt === "string"
+          ? new Date(item.createdAt).toLocaleDateString("uz-UZ", {
+              day: "2-digit",
+              month: "short",
+            })
+          : "Hozir",
+    }));
 
   const today = new Date().toLocaleDateString("uz-UZ", {
     weekday: "long",
@@ -122,19 +140,10 @@ export default function DashboardPage() {
     day: "numeric",
   });
 
-  const handleAddComment = () => {
-    if (!newComment.trim()) return;
-    setComments([
-      {
-        id: Date.now(),
-        user: session?.firstName ?? "Siz",
-        avatar: session?.firstName?.[0] ?? "S",
-        color: "#7C3AED",
-        text: newComment,
-        time: "Hozir",
-      },
-      ...comments,
-    ]);
+  const handleAddComment = async () => {
+    const trimmed = newComment.trim();
+    if (!trimmed) return;
+    await actions.createCommunityPost({ text: trimmed, category: "Umumiy" });
     setNewComment("");
   };
 

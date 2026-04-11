@@ -52,10 +52,17 @@ function parseErrorMessage(
 ) {
   const payloadMessage = extractPayloadMessage(payload);
   const isGoogleAuth = path.startsWith("/auth/google");
+  const isPasswordResetFlow = path.startsWith("/auth/password/");
 
   if (status === 400 || status === 422) {
     if (isGoogleAuth) {
       return "Google orqali tasdiqlashni hozir yakunlab bo'lmadi. Qayta urinib ko'ring.";
+    }
+    if (isPasswordResetFlow) {
+      return (
+        payloadMessage ||
+        "Kiritilgan ma'lumotlar noto'g'ri yoki tasdiqlash kodi yaroqsiz."
+      );
     }
     return payloadMessage || USER_FRIENDLY_MESSAGES.validation;
   }
@@ -63,6 +70,11 @@ function parseErrorMessage(
   if (status === 401) {
     if (isGoogleAuth) {
       return payloadMessage || "Google akkaunt tasdiqlanmadi. Qayta urinib ko'ring.";
+    }
+    if (isPasswordResetFlow) {
+      return (
+        payloadMessage || "Tasdiqlash kodi yaroqsiz yoki muddati tugagan."
+      );
     }
     if (path.startsWith("/auth/login") || path.startsWith("/auth/register")) {
       return payloadMessage || "Login yoki parol noto'g'ri.";
@@ -79,10 +91,22 @@ function parseErrorMessage(
   }
 
   if (status === 409) {
+    if (path === "/auth/password/reset") {
+      return (
+        payloadMessage ||
+        "Yangi parol oldingi parol bilan bir xil bo'lmasligi kerak."
+      );
+    }
     return payloadMessage || USER_FRIENDLY_MESSAGES.conflict;
   }
 
   if (status === 429) {
+    if (isPasswordResetFlow) {
+      return (
+        payloadMessage ||
+        "Juda ko'p noto'g'ri urinish bo'ldi. Yangi kod so'rab qayta urinib ko'ring."
+      );
+    }
     return USER_FRIENDLY_MESSAGES.rateLimited;
   }
 
@@ -373,32 +397,6 @@ export async function apiRequest(path, options = {}, config = {}) {
 }
 
 export async function registerUser(payload) {
-  // Mock success if NO API URL is configured (for demo/development)
-  if (!API_BASE_URL) {
-    const mockUser = {
-      user: {
-        id: "mock-123",
-        email: payload.email,
-        fullName: `${payload.firstName} ${payload.lastName}`,
-        firstName: payload.firstName,
-        lastName: payload.lastName,
-        phone: payload.phone,
-        address: payload.address,
-        region: payload.region,
-        city: payload.city,
-        district: payload.district,
-        profession: payload.profession,
-        role: "user",
-        createdAt: new Date().toISOString(),
-      },
-      accessToken: "mock-access-token",
-      refreshToken: "mock-refresh-token"
-    };
-    return new Promise((resolve) => {
-      setTimeout(() => resolve({ ok: true, user: mockUser }), 800);
-    });
-  }
-
   try {
     const session = await apiRequest("/auth/register", {
       method: "POST",
@@ -411,24 +409,6 @@ export async function registerUser(payload) {
 }
 
 export async function loginUser({ email, password }) {
-  // Mock success if NO API URL is configured (for demo/development)
-  if (!API_BASE_URL) {
-    const mockUser = {
-      user: {
-        id: "mock-123",
-        email: email,
-        fullName: "Test User",
-        role: "user",
-        createdAt: new Date().toISOString(),
-      },
-      accessToken: "mock-access-token",
-      refreshToken: "mock-refresh-token"
-    };
-    return new Promise((resolve) => {
-      setTimeout(() => resolve({ ok: true, user: mockUser }), 800);
-    });
-  }
-
   try {
     const session = await apiRequest("/auth/login", {
       method: "POST",
@@ -447,6 +427,42 @@ export async function loginWithGoogle(idToken) {
       body: JSON.stringify({ idToken }),
     });
     return { ok: true, user: session };
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
+}
+
+export async function requestPasswordResetCode(email) {
+  try {
+    const payload = await apiRequest("/auth/password/forgot", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+    return { ok: true, data: payload };
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
+}
+
+export async function verifyPasswordResetCode({ email, code }) {
+  try {
+    const payload = await apiRequest("/auth/password/verify", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    });
+    return { ok: true, data: payload };
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
+}
+
+export async function resetPasswordWithCode({ email, code, newPassword }) {
+  try {
+    const payload = await apiRequest("/auth/password/reset", {
+      method: "POST",
+      body: JSON.stringify({ email, code, newPassword }),
+    });
+    return { ok: true, data: payload };
   } catch (error) {
     return { ok: false, message: error.message };
   }

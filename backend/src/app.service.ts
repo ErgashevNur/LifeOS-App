@@ -2,27 +2,42 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
+  Logger,
   NotFoundException,
   OnModuleInit,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from "@nestjs/common";
-import { randomUUID } from "node:crypto";
+import {
+  createHash,
+  randomInt,
+  randomUUID,
+  timingSafeEqual,
+} from "node:crypto";
 import {
   AppSettings,
+  PasswordResetCode as PrismaPasswordResetCode,
   Prisma,
   User as PrismaUser,
 } from "@prisma/client";
 import { compareSync, hashSync } from "bcryptjs";
 import { OAuth2Client } from "google-auth-library";
 import { JwtService } from "@nestjs/jwt";
+import nodemailer from "nodemailer";
 import {
   ACCESS_TOKEN_EXPIRES_IN_SECONDS,
   ACCESS_TOKEN_SECRET,
   REFRESH_TOKEN_EXPIRES_IN_SECONDS,
   REFRESH_TOKEN_SECRET,
 } from "./auth.constants";
-import { DEFAULT_PERSISTED_DATA } from "./default-data";
+import {
+  DEFAULT_COMMUNITY_FEED,
+  DEFAULT_FINANCE_OVERVIEW,
+  DEFAULT_PERSISTED_DATA,
+} from "./default-data";
 import {
   AddCommentDto,
   AddFocusSessionDto,
@@ -30,11 +45,14 @@ import {
   AddTaskDto,
   AmountDto,
   AssistantPromptDto,
+  CreateCommunityPostDto,
   CreateBookDto,
   CreateGoalDto,
   CreateHabitDto,
+  ForgotPasswordDto,
   GoogleAuthDto,
   LoginDto,
+  ResetPasswordDto,
   RefreshTokenDto,
   RegisterDto,
   SendNetworkMessageDto,
@@ -44,10 +62,13 @@ import {
   UpdateBookPagesDto,
   UpdateGoalProgressDto,
   UpdateLanguageDto,
+  VerifyResetCodeDto,
 } from "./dto";
 import {
   AccessTokenPayload,
   AuthUser,
+  CommunityFeedItem,
+  FinanceOverview,
   LifeOSState,
   RefreshTokenPayload,
   SessionPayload,
@@ -75,6 +96,75 @@ const GOOGLE_CLIENT_IDS = (process.env.GOOGLE_CLIENT_ID ?? "")
   .map((value) => value.trim())
   .filter(Boolean);
 
+const COMMUNITY_CATEGORIES = [
+  "Moliya",
+  "Sog'liq",
+  "Unumdorlik",
+  "Bilim",
+  "Umumiy",
+] as const;
+
+function parseIntEnv(
+  name: string,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  const raw = process.env[name];
+  if (!raw) {
+    return fallback;
+  }
+
+  const value = Number(raw);
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return clamp(Math.floor(value), min, max);
+}
+
+const PASSWORD_RESET_CODE_DIGITS = parseIntEnv(
+  "PASSWORD_RESET_CODE_LENGTH",
+  6,
+  4,
+  8,
+);
+const PASSWORD_RESET_CODE_TTL_MINUTES = parseIntEnv(
+  "PASSWORD_RESET_CODE_TTL_MINUTES",
+  10,
+  1,
+  60,
+);
+const PASSWORD_RESET_MAX_ATTEMPTS = parseIntEnv(
+  "PASSWORD_RESET_CODE_MAX_ATTEMPTS",
+  5,
+  1,
+  20,
+);
+const PASSWORD_RESET_CODE_PEPPER = (
+  process.env.PASSWORD_RESET_CODE_PEPPER || ACCESS_TOKEN_SECRET
+).trim();
+const PASSWORD_RESET_EMAIL_SUBJECT = "LifeOS parolni tiklash kodi";
+
+interface SupplementalState {
+  finance: FinanceOverview;
+  community: {
+    feed: CommunityFeedItem[];
+    nextId: number;
+  };
+}
+
+const DEFAULT_SUPPLEMENTAL_STATE: SupplementalState = {
+  finance: clone(DEFAULT_FINANCE_OVERVIEW),
+  community: {
+    feed: clone(DEFAULT_COMMUNITY_FEED),
+    nextId:
+      DEFAULT_COMMUNITY_FEED.length > 0
+        ? Math.max(...DEFAULT_COMMUNITY_FEED.map((item) => item.id)) + 1
+        : 1,
+  },
+};
+
 function isBcryptHash(password: string): boolean {
   return /^\$2[aby]\$\d{2}\$/.test(password);
 }
@@ -98,7 +188,9 @@ function splitName(fullName: string): { firstName: string; lastName: string } {
 
 @Injectable()
 export class AppService implements OnModuleInit {
+  private readonly logger = new Logger(AppService.name);
   private readonly googleOAuthClient = new OAuth2Client();
+  private passwordResetTransporter: nodemailer.Transporter | null | undefined;
 
   constructor(
     private readonly jwtService: JwtService,
@@ -107,6 +199,202 @@ export class AppService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     await this.seedDefaults();
+  }
+
+  private getPasswordResetFromAddress(): string | null {
+    const fromAddress = (process.env.SMTP_FROM ?? "").trim();
+    return fromAddress || null;
+  }
+
+  private getPasswordResetTransporter(): nodemailer.Transporter | null {
+    if (this.passwordResetTransporter !== undefined) {
+      return this.passwordResetTransporter;
+    }
+
+    const host = (process.env.SMTP_HOST ?? "").trim();
+    const port = parseIntEnv("SMTP_PORT", 465, 1, 65_535);
+    const user = (process.env.SMTP_USER ?? "").trim();
+    const pass = (process.env.SMTP_PASS ?? "").trim();
+    const from = this.getPasswordResetFromAddress();
+
+    if (!host || !user || !pass || !from) {
+      this.passwordResetTransporter = null;
+      return this.passwordResetTransporter;
+    }
+
+    const secureRaw = (process.env.SMTP_SECURE ?? "").trim().toLowerCase();
+    const secure = secureRaw ? secureRaw === "true" : port === 465;
+    const rejectUnauthorized =
+      (process.env.SMTP_TLS_REJECT_UNAUTHORIZED ?? "true")
+        .trim()
+        .toLowerCase() !== "false";
+
+    this.passwordResetTransporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: {
+        user,
+        pass,
+      },
+      tls: {
+        rejectUnauthorized,
+      },
+    });
+
+    return this.passwordResetTransporter;
+  }
+
+  private normalizePasswordResetCode(rawCode: string): string {
+    const code = this.normalizeRequiredText(
+      rawCode,
+      "Tasdiqlash kodi",
+      PASSWORD_RESET_CODE_DIGITS,
+    );
+
+    if (!/^\d+$/.test(code) || code.length !== PASSWORD_RESET_CODE_DIGITS) {
+      throw new BadRequestException(
+        `Tasdiqlash kodi ${PASSWORD_RESET_CODE_DIGITS} xonali raqam bo'lishi kerak.`,
+      );
+    }
+
+    return code;
+  }
+
+  private generatePasswordResetCode(): string {
+    const maxValue = 10 ** PASSWORD_RESET_CODE_DIGITS;
+    return randomInt(0, maxValue)
+      .toString()
+      .padStart(PASSWORD_RESET_CODE_DIGITS, "0");
+  }
+
+  private hashPasswordResetCode(userId: string, code: string): string {
+    return createHash("sha256")
+      .update(`${userId}:${code}:${PASSWORD_RESET_CODE_PEPPER}`)
+      .digest("hex");
+  }
+
+  private safeHexEquals(left: string, right: string): boolean {
+    try {
+      const leftBuffer = Buffer.from(left, "hex");
+      const rightBuffer = Buffer.from(right, "hex");
+      if (leftBuffer.length !== rightBuffer.length) {
+        return false;
+      }
+      return timingSafeEqual(leftBuffer, rightBuffer);
+    } catch {
+      return false;
+    }
+  }
+
+  private async sendPasswordResetCodeEmail(
+    toEmail: string,
+    code: string,
+  ): Promise<void> {
+    const transporter = this.getPasswordResetTransporter();
+    const from = this.getPasswordResetFromAddress();
+
+    if (!transporter || !from) {
+      throw new ServiceUnavailableException(
+        "Parolni tiklash email xizmati sozlanmagan. SMTP sozlamalarini tekshiring.",
+      );
+    }
+
+    const expiryMinutes = PASSWORD_RESET_CODE_TTL_MINUTES;
+    await transporter.sendMail({
+      from,
+      to: toEmail,
+      subject: PASSWORD_RESET_EMAIL_SUBJECT,
+      text: `LifeOS tasdiqlash kodi: ${code}\n\nKod ${expiryMinutes} daqiqa ichida amal qiladi.\nAgar bu siz bo'lmasangiz, xatni e'tiborsiz qoldiring.`,
+      html: `<div style="font-family:Arial,sans-serif;line-height:1.5;color:#0f172a">
+        <h2 style="margin:0 0 12px">LifeOS parolni tiklash</h2>
+        <p style="margin:0 0 12px">Tasdiqlash kodi:</p>
+        <p style="margin:0 0 16px;font-size:28px;letter-spacing:4px;font-weight:700">${code}</p>
+        <p style="margin:0 0 8px">Kod <strong>${expiryMinutes} daqiqa</strong> davomida amal qiladi.</p>
+        <p style="margin:0">Agar bu so'rovni siz yubormagan bo'lsangiz, xatni e'tiborsiz qoldiring.</p>
+      </div>`,
+    });
+  }
+
+  private async resolvePasswordResetCode(
+    emailInput: string,
+    codeInput: string,
+  ): Promise<{ user: PrismaUser; resetCode: PrismaPasswordResetCode }> {
+    const email = this.normalizeRequiredText(emailInput, "Email", 5).toLowerCase();
+    const code = this.normalizePasswordResetCode(codeInput);
+    const now = new Date();
+
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      throw new BadRequestException(
+        "Tasdiqlash kodi yaroqsiz yoki muddati tugagan.",
+      );
+    }
+
+    const resetCode = await this.prisma.passwordResetCode.findFirst({
+      where: {
+        userId: user.id,
+        consumedAt: null,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    if (!resetCode) {
+      throw new BadRequestException(
+        "Tasdiqlash kodi yaroqsiz yoki muddati tugagan.",
+      );
+    }
+
+    if (resetCode.expiresAt.getTime() <= now.getTime()) {
+      await this.prisma.passwordResetCode.update({
+        where: { id: resetCode.id },
+        data: { consumedAt: now },
+      });
+      throw new BadRequestException(
+        "Tasdiqlash kodi yaroqsiz yoki muddati tugagan.",
+      );
+    }
+
+    if (resetCode.attempts >= resetCode.maxAttempts) {
+      await this.prisma.passwordResetCode.update({
+        where: { id: resetCode.id },
+        data: { consumedAt: now },
+      });
+      throw new HttpException(
+        "Tasdiqlash kodi urinish limiti tugadi. Qayta kod so'rang.",
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    const candidateHash = this.hashPasswordResetCode(user.id, code);
+    const isValidCode = this.safeHexEquals(candidateHash, resetCode.codeHash);
+    if (!isValidCode) {
+      const nextAttempts = resetCode.attempts + 1;
+      await this.prisma.passwordResetCode.update({
+        where: { id: resetCode.id },
+        data: {
+          attempts: nextAttempts,
+          ...(nextAttempts >= resetCode.maxAttempts
+            ? { consumedAt: now }
+            : {}),
+        },
+      });
+
+      if (nextAttempts >= resetCode.maxAttempts) {
+        throw new HttpException(
+          "Tasdiqlash kodi urinish limiti tugadi. Qayta kod so'rang.",
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+
+      throw new BadRequestException(
+        "Tasdiqlash kodi yaroqsiz yoki muddati tugagan.",
+      );
+    }
+
+    return { user, resetCode };
   }
 
   private normalizeRole(role: string): "admin" | "user" {
@@ -275,6 +563,16 @@ export class AppService implements OnModuleInit {
           data: {
             id: 1,
             payload: defaults.state.content as unknown as Prisma.InputJsonValue,
+          },
+        });
+      }
+
+      const appStateCount = await tx.appState.count();
+      if (appStateCount === 0) {
+        await tx.appState.create({
+          data: {
+            id: 1,
+            state: DEFAULT_SUPPLEMENTAL_STATE as unknown as Prisma.InputJsonValue,
           },
         });
       }
@@ -501,6 +799,241 @@ export class AppService implements OnModuleInit {
         mobileSync: row.integrationMobileSync,
       },
     };
+  }
+
+  private normalizeCommunityCategory(value?: string): string {
+    const normalized = typeof value === "string" ? value.trim() : "";
+    if (!normalized) {
+      return "Umumiy";
+    }
+
+    if (
+      (COMMUNITY_CATEGORIES as readonly string[]).includes(normalized)
+    ) {
+      return normalized;
+    }
+
+    return "Umumiy";
+  }
+
+  private normalizeCommunityRole(value?: string): "Admin" | "User" {
+    const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
+    return normalized === "admin" ? "Admin" : "User";
+  }
+
+  private parseSupplementalState(payload: Prisma.JsonValue): SupplementalState {
+    const defaults = clone(DEFAULT_SUPPLEMENTAL_STATE);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return defaults;
+    }
+
+    const parsed = payload as Partial<SupplementalState>;
+    const financeCandidate =
+      parsed.finance &&
+      typeof parsed.finance === "object" &&
+      !Array.isArray(parsed.finance)
+        ? parsed.finance
+        : undefined;
+
+    const investments = Array.isArray(financeCandidate?.investments)
+      ? financeCandidate.investments
+          .map((item) => {
+            if (!item || typeof item !== "object" || Array.isArray(item)) {
+              return null;
+            }
+            const label =
+              typeof item.label === "string" ? item.label.trim() : "";
+            const val = typeof item.val === "string" ? item.val.trim() : "";
+            const stat =
+              typeof item.stat === "string" ? item.stat.trim() : "";
+            if (!label || !val || !stat) {
+              return null;
+            }
+            return { label, val, stat };
+          })
+          .filter(
+            (
+              item,
+            ): item is { label: string; val: string; stat: string } =>
+              Boolean(item),
+          )
+      : defaults.finance.investments;
+
+    const finance: FinanceOverview = {
+      wealthScore: clamp(
+        Math.round(
+          Number.isFinite(Number(financeCandidate?.wealthScore))
+            ? Number(financeCandidate?.wealthScore)
+            : defaults.finance.wealthScore,
+        ),
+        0,
+        100,
+      ),
+      monthlyGrowthPct: Number.isFinite(Number(financeCandidate?.monthlyGrowthPct))
+        ? Number(financeCandidate?.monthlyGrowthPct)
+        : defaults.finance.monthlyGrowthPct,
+      debtCurrent: Math.max(
+        0,
+        Math.round(
+          Number.isFinite(Number(financeCandidate?.debtCurrent))
+            ? Number(financeCandidate?.debtCurrent)
+            : defaults.finance.debtCurrent,
+        ),
+      ),
+      debtTarget: Math.max(
+        1,
+        Math.round(
+          Number.isFinite(Number(financeCandidate?.debtTarget))
+            ? Number(financeCandidate?.debtTarget)
+            : defaults.finance.debtTarget,
+        ),
+      ),
+      debtPlanHint:
+        typeof financeCandidate?.debtPlanHint === "string" &&
+        financeCandidate.debtPlanHint.trim().length > 0
+          ? financeCandidate.debtPlanHint.trim()
+          : defaults.finance.debtPlanHint,
+      savingsCurrent: Math.max(
+        0,
+        Math.round(
+          Number.isFinite(Number(financeCandidate?.savingsCurrent))
+            ? Number(financeCandidate?.savingsCurrent)
+            : defaults.finance.savingsCurrent,
+        ),
+      ),
+      savingsTarget: Math.max(
+        1,
+        Math.round(
+          Number.isFinite(Number(financeCandidate?.savingsTarget))
+            ? Number(financeCandidate?.savingsTarget)
+            : defaults.finance.savingsTarget,
+        ),
+      ),
+      income: Math.max(
+        0,
+        Math.round(
+          Number.isFinite(Number(financeCandidate?.income))
+            ? Number(financeCandidate?.income)
+            : defaults.finance.income,
+        ),
+      ),
+      expense: Math.max(
+        0,
+        Math.round(
+          Number.isFinite(Number(financeCandidate?.expense))
+            ? Number(financeCandidate?.expense)
+            : defaults.finance.expense,
+        ),
+      ),
+      investments:
+        investments.length > 0 ? investments : defaults.finance.investments,
+    };
+
+    const communityCandidate =
+      parsed.community &&
+      typeof parsed.community === "object" &&
+      !Array.isArray(parsed.community)
+        ? parsed.community
+        : undefined;
+
+    const feedCandidate = Array.isArray(communityCandidate?.feed)
+      ? communityCandidate.feed
+      : defaults.community.feed;
+
+    const feed: CommunityFeedItem[] = feedCandidate
+      .map((item, index) => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) {
+          return null;
+        }
+
+        const text = typeof item.text === "string" ? item.text.trim() : "";
+        if (!text) {
+          return null;
+        }
+
+        const id =
+          Number.isInteger(item.id) && Number(item.id) > 0
+            ? Number(item.id)
+            : index + 1;
+
+        const rawCreatedAt =
+          typeof item.createdAt === "string" ? item.createdAt : "";
+        const createdAt = rawCreatedAt.trim() || new Date().toISOString();
+
+        return {
+          id,
+          user:
+            typeof item.user === "string" && item.user.trim()
+              ? item.user.trim()
+              : "LifeOS User",
+          role: this.normalizeCommunityRole(
+            typeof item.role === "string" ? item.role : "",
+          ),
+          category: this.normalizeCommunityCategory(
+            typeof item.category === "string" ? item.category : "",
+          ),
+          text,
+          likes: Math.max(
+            0,
+            Math.round(
+              Number.isFinite(Number(item.likes)) ? Number(item.likes) : 0,
+            ),
+          ),
+          comments: Math.max(
+            0,
+            Math.round(
+              Number.isFinite(Number(item.comments)) ? Number(item.comments) : 0,
+            ),
+          ),
+          createdAt,
+        };
+      })
+      .filter((item): item is CommunityFeedItem => Boolean(item))
+      .sort((a, b) => b.id - a.id);
+
+    const maxId =
+      feed.length > 0 ? Math.max(...feed.map((item) => item.id)) : 0;
+    const parsedNextId =
+      Number.isInteger(Number(communityCandidate?.nextId)) &&
+      Number(communityCandidate?.nextId) > 0
+        ? Number(communityCandidate?.nextId)
+        : maxId + 1;
+
+    return {
+      finance,
+      community: {
+        feed,
+        nextId: Math.max(parsedNextId, maxId + 1, 1),
+      },
+    };
+  }
+
+  private async getOrCreateSupplementalState(): Promise<SupplementalState> {
+    const row = await this.prisma.appState.findUnique({ where: { id: 1 } });
+    if (row) {
+      return this.parseSupplementalState(row.state);
+    }
+
+    await this.prisma.appState.create({
+      data: {
+        id: 1,
+        state: DEFAULT_SUPPLEMENTAL_STATE as unknown as Prisma.InputJsonValue,
+      },
+    });
+    return clone(DEFAULT_SUPPLEMENTAL_STATE);
+  }
+
+  private async saveSupplementalState(state: SupplementalState): Promise<void> {
+    await this.prisma.appState.upsert({
+      where: { id: 1 },
+      update: {
+        state: state as unknown as Prisma.InputJsonValue,
+      },
+      create: {
+        id: 1,
+        state: state as unknown as Prisma.InputJsonValue,
+      },
+    });
   }
 
   private parseContentPayload(payload: Prisma.JsonValue): LifeOSState["content"] {
@@ -1026,6 +1559,17 @@ export class AppService implements OnModuleInit {
         },
       });
 
+      await tx.appState.upsert({
+        where: { id: 1 },
+        update: {
+          state: DEFAULT_SUPPLEMENTAL_STATE as unknown as Prisma.InputJsonValue,
+        },
+        create: {
+          id: 1,
+          state: DEFAULT_SUPPLEMENTAL_STATE as unknown as Prisma.InputJsonValue,
+        },
+      });
+
       await tx.appSettings.upsert({
         where: { id: 1 },
         update: {
@@ -1297,6 +1841,142 @@ export class AppService implements OnModuleInit {
     return this.issueSession(user);
   }
 
+  async requestPasswordReset(
+    dto: ForgotPasswordDto,
+  ): Promise<{ accepted: true }> {
+    if (!this.getPasswordResetTransporter() || !this.getPasswordResetFromAddress()) {
+      throw new ServiceUnavailableException(
+        "Parolni tiklash email xizmati sozlanmagan. SMTP ni konfiguratsiya qiling.",
+      );
+    }
+
+    const email = this.normalizeRequiredText(dto.email, "Email", 5).toLowerCase();
+    const user = await this.prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      return { accepted: true };
+    }
+
+    const now = new Date();
+    await this.prisma.passwordResetCode.updateMany({
+      where: {
+        userId: user.id,
+        consumedAt: null,
+      },
+      data: {
+        consumedAt: now,
+      },
+    });
+
+    const code = this.generatePasswordResetCode();
+    const createdCode = await this.prisma.passwordResetCode.create({
+      data: {
+        id: createId("prc"),
+        userId: user.id,
+        codeHash: this.hashPasswordResetCode(user.id, code),
+        expiresAt: new Date(
+          Date.now() + PASSWORD_RESET_CODE_TTL_MINUTES * 60 * 1000,
+        ),
+        attempts: 0,
+        maxAttempts: PASSWORD_RESET_MAX_ATTEMPTS,
+      },
+    });
+
+    try {
+      await this.sendPasswordResetCodeEmail(email, code);
+    } catch (error) {
+      await this.prisma.passwordResetCode.updateMany({
+        where: {
+          id: createdCode.id,
+          consumedAt: null,
+        },
+        data: {
+          consumedAt: new Date(),
+        },
+      });
+
+      const message =
+        error instanceof Error ? error.message : "Email yuborishda xatolik.";
+      this.logger.error(
+        `Password reset kodini yuborish muvaffaqiyatsiz bo'ldi: ${message}`,
+      );
+    }
+
+    return { accepted: true };
+  }
+
+  async verifyPasswordResetCode(
+    dto: VerifyResetCodeDto,
+  ): Promise<{ valid: true; expiresAt: string }> {
+    const { resetCode } = await this.resolvePasswordResetCode(dto.email, dto.code);
+    return {
+      valid: true,
+      expiresAt: resetCode.expiresAt.toISOString(),
+    };
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<{ reset: true }> {
+    const newPassword = this.normalizeRequiredText(
+      dto.newPassword,
+      "Yangi parol",
+      8,
+    );
+    const { user, resetCode } = await this.resolvePasswordResetCode(
+      dto.email,
+      dto.code,
+    );
+
+    const isSamePassword = isBcryptHash(user.password)
+      ? compareSync(newPassword, user.password)
+      : user.password === newPassword;
+    if (isSamePassword) {
+      throw new ConflictException(
+        "Yangi parol oldingi parol bilan bir xil bo'lmasligi kerak.",
+      );
+    }
+
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      const consumeResult = await tx.passwordResetCode.updateMany({
+        where: {
+          id: resetCode.id,
+          consumedAt: null,
+        },
+        data: {
+          consumedAt: now,
+        },
+      });
+      if (consumeResult.count !== 1) {
+        throw new ConflictException(
+          "Tasdiqlash kodi allaqachon ishlatilgan yoki bekor qilingan.",
+        );
+      }
+
+      await tx.passwordResetCode.updateMany({
+        where: {
+          userId: user.id,
+          consumedAt: null,
+        },
+        data: {
+          consumedAt: now,
+        },
+      });
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashSync(newPassword, PASSWORD_HASH_ROUNDS),
+          tokenVersion: {
+            increment: 1,
+          },
+          refreshTokenId: null,
+        },
+      });
+    });
+
+    return { reset: true };
+  }
+
   async validateAccessTokenPayload(payload: AccessTokenPayload): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user) {
@@ -1391,6 +2071,59 @@ export class AppService implements OnModuleInit {
       habitsCount: habits.length,
       booksCount,
     };
+  }
+
+  async getFinanceOverview(): Promise<FinanceOverview> {
+    const supplemental = await this.getOrCreateSupplementalState();
+    return supplemental.finance;
+  }
+
+  async getCommunityFeed(): Promise<CommunityFeedItem[]> {
+    const supplemental = await this.getOrCreateSupplementalState();
+    return supplemental.community.feed;
+  }
+
+  async createCommunityPost(
+    actorUserId: string,
+    dto: CreateCommunityPostDto,
+  ): Promise<CommunityFeedItem[]> {
+    const text = this.normalizeRequiredText(dto.text, "Community post", 1);
+    const category = this.normalizeCommunityCategory(dto.category);
+
+    const actor = await this.prisma.user.findUnique({ where: { id: actorUserId } });
+    if (!actor) {
+      throw new UnauthorizedException("Access token uchun user topilmadi.");
+    }
+
+    const supplemental = await this.getOrCreateSupplementalState();
+    const currentFeed = supplemental.community.feed;
+    const maxId =
+      currentFeed.length > 0
+        ? Math.max(...currentFeed.map((item) => item.id))
+        : 0;
+    const nextId = Math.max(supplemental.community.nextId, maxId + 1, 1);
+
+    const createdItem: CommunityFeedItem = {
+      id: nextId,
+      user: actor.firstName || actor.fullName || actor.email.split("@")[0],
+      role: this.normalizeRole(actor.role) === "admin" ? "Admin" : "User",
+      category,
+      text,
+      likes: 0,
+      comments: 0,
+      createdAt: new Date().toISOString(),
+    };
+
+    const feed = [createdItem, ...currentFeed].slice(0, 120);
+    await this.saveSupplementalState({
+      ...supplemental,
+      community: {
+        feed,
+        nextId: nextId + 1,
+      },
+    });
+
+    return feed;
   }
 
   async addDashboardTask(dto: AddTaskDto): Promise<LifeOSState> {
@@ -1921,6 +2654,14 @@ export class AppService implements OnModuleInit {
       role: message.role === "user" ? "user" : "assistant",
       text: message.text,
     }));
+  }
+
+  async getAssistant(): Promise<LifeOSState["assistant"]> {
+    const messages = await this.getAssistantMessages();
+    return {
+      messages,
+      nextId: messages.length > 0 ? messages[messages.length - 1].id + 1 : 1,
+    };
   }
 
   private async assistantReply(prompt: string): Promise<string> {
