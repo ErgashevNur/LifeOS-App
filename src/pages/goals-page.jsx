@@ -198,8 +198,8 @@ export default function GoalsPage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Jami",      value: total,     color: "#fff" },
-          { label: "Bajarildi", value: completed,  color: "#00FFAA" },
+          { label: "Jami",      value: total,            color: "#fff" },
+          { label: "Bajarildi", value: completed,        color: "#00FFAA" },
           { label: "Qoldi",     value: total - completed, color: "#FF3B3B" },
         ].map(({ label, value, color }) => (
           <div key={label} className="rounded-2xl p-4" style={{ background: "#111" }}>
@@ -231,7 +231,6 @@ export default function GoalsPage() {
                 style={{ borderColor: "#222", color: "#ccc" }}
               />
 
-              {/* Period selector */}
               <div className="flex gap-2">
                 {PERIODS.map((p) => (
                   <button
@@ -290,9 +289,9 @@ export default function GoalsPage() {
             key={p}
             period={p}
             goals={byPeriod[p]}
-            onDelete={actions.deleteGoal}
-            onIncrement={(id) => actions.incrementGoal(id, 1)}
-            onDecrement={(id) => actions.incrementGoal(id, -1)}
+            onDelete={actions.removeGoal}
+            onIncrement={(id) => actions.updateGoalProgress(id, 1)}
+            onDecrement={(id) => actions.updateGoalProgress(id, -1)}
           />
         ))}
       </div>

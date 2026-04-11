@@ -102,9 +102,7 @@ function SidebarContent({ navItems, location, session, handleLogout, onNavClick 
                     : "text-white/50 hover:bg-white/[0.06] hover:text-white/80"
                 )}
               >
-                <div
-                  className="w-5 h-5 flex items-center justify-center flex-shrink-0"
-                >
+                <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
                   <Icon
                     className="w-4 h-4 transition-colors"
                     style={{ color: active ? item.color : undefined }}
@@ -195,7 +193,6 @@ export default function AppLayout() {
               transition={{ type: "spring", damping: 28, stiffness: 320 }}
               className="fixed left-0 top-0 h-full w-[220px] bg-[#191919] flex flex-col z-50 lg:hidden border-r border-white/[0.04]"
             >
-              {/* Close button */}
               <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="absolute top-3.5 right-3 text-white/40 hover:text-white/80 transition-colors z-10"
@@ -220,7 +217,6 @@ export default function AppLayout() {
         {/* Top Header */}
         <header className="h-[52px] border-b border-black/[0.06] bg-[#F5F5F4] flex items-center px-4 lg:px-5 flex-shrink-0 gap-3">
 
-          {/* Mobile hamburger */}
           <button
             onClick={() => setMobileMenuOpen(true)}
             className="lg:hidden text-gray-400 hover:text-gray-700 p-1 -ml-1 transition-colors"
@@ -228,7 +224,6 @@ export default function AppLayout() {
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Breadcrumb */}
           <div className="flex items-center gap-1 text-[13px] select-none">
             <span className="text-gray-400 font-medium">LifeOS</span>
             <ChevronRight className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
@@ -241,7 +236,6 @@ export default function AppLayout() {
           </div>
           <div className="flex-1" />
 
-          {/* Status pill */}
           <div
             className={cn(
               "flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border",
@@ -259,7 +253,6 @@ export default function AppLayout() {
             {backendHealth.ok ? "Online" : "Offline"}
           </div>
 
-          {/* Avatar */}
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity">
             {(session.firstName?.[0] ?? "") + (session.lastName?.[0] ?? "") || "U"}
           </div>
