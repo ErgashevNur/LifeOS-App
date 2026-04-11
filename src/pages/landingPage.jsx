@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { apiRequest } from "@/lib/auth";
 import {
   ArrowRight, BookOpen, Brain, Sparkles, Target, Trophy,
-  TrendingUp, Zap, Check, Star, Users, HeartPulse,
+  TrendingUp, Zap, Star, Users, HeartPulse,
   Wallet, Bot, Repeat, ChevronRight, Play, Flame,
   LayoutDashboard as LayoutDashboardIcon,
   Target as TargetIcon,
@@ -12,7 +12,7 @@ import {
   BookOpen as BookOpenIcon,
   Trophy as TrophyIcon,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -58,35 +58,6 @@ function MarqueeStrip({ items }) {
         ))}
       </motion.div>
     </div>
-  );
-}
-
-// ── Testimonial card ──────────────────────────────────────────────────────────
-function TestimonialCard({ quote, name, role, avatar, delay = 0 }) {
-  return (
-    <MotionDiv
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.6, delay }}
-      className="flex flex-col gap-4 rounded-2xl bg-white border border-slate-100 p-6 shadow-sm hover:shadow-md transition-shadow"
-    >
-      <div className="flex gap-0.5">
-        {[...Array(5)].map((_, i) => (
-          <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-        ))}
-      </div>
-      <p className="text-slate-700 text-[15px] leading-relaxed font-medium flex-1">"{quote}"</p>
-      <div className="flex items-center gap-3 pt-2 border-t border-slate-50">
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-          {avatar}
-        </div>
-        <div>
-          <p className="text-[13px] font-bold text-slate-900">{name}</p>
-          <p className="text-[11px] text-slate-400">{role}</p>
-        </div>
-      </div>
-    </MotionDiv>
   );
 }
 
@@ -157,12 +128,6 @@ export default function LandingPage() {
   const MARQUEE_ITEMS = [
     "10,000+ Foydalanuvchi", "500K+ Maqsad", "1M+ Streak",
     "Unumdorlik +48%", "Bepul Boshlash", "LifeOS 2.0",
-  ];
-
-  const TESTIMONIALS = [
-    { quote: "LifeOS mening kundalik hayotimni to'liq o'zgartirdi. Maqsadlarimga erishish ancha osonlashdi!", name: "Asadbek T.", role: "Tadbirkor", avatar: "A" },
-    { quote: "Odatlar va fokus taimeri bilan har kuni 3 soat ko'proq samarali ishlayapman.", name: "Malika R.", role: "Designer", avatar: "M" },
-    { quote: "Kitoblar bo'limi va AI murabbiy mening o'sishimni ikki baravarga oshirdi.", name: "Jahongir K.", role: "Dasturchi", avatar: "J" },
   ];
 
   const MODULES = [
@@ -236,8 +201,8 @@ export default function LandingPage() {
             ref={logoRef}
             className="text-[17px] font-bold tracking-tight text-slate-900 select-none cursor-pointer flex items-center gap-2"
           >
-            <span className="w-5 h-5 rounded-[5px] bg-violet-600 inline-flex items-center justify-center">
-              <Zap className="w-3 h-3 text-white" strokeWidth={2.5} />
+            <span className="w-7 h-7 rounded-[7px] bg-black inline-flex items-center justify-center">
+              <span className="text-white font-extrabold text-[16px] leading-none">L</span>
             </span>
             LifeOS
           </p>
@@ -399,8 +364,8 @@ export default function LandingPage() {
                 {/* Top bar */}
                 <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.07] bg-[#191919]">
                   <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-[5px] bg-violet-600 flex items-center justify-center">
-                      <Zap className="w-3 h-3 text-white" strokeWidth={2.5} />
+                    <div className="w-5 h-5 rounded-[5px] bg-white flex items-center justify-center">
+                      <span className="text-black font-extrabold text-[11px] leading-none">L</span>
                     </div>
                     <span className="text-white/80 text-[12px] font-semibold">LifeOS</span>
                   </div>
@@ -741,78 +706,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Testimonials ── */}
-      <section className="py-24 bg-white">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <MotionDiv
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <p className="text-[11px] font-black tracking-[0.25em] text-indigo-500 uppercase mb-4">Testimonials</p>
-            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900">
-              Foydalanuvchilar nima deydi
-            </h2>
-          </MotionDiv>
-          <div className="grid md:grid-cols-3 gap-5">
-            {TESTIMONIALS.map((item, i) => (
-              <TestimonialCard key={i} {...item} delay={i * 0.1} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── CTA Section — Bepul boshlash ── */}
-      <section className="py-28 bg-gradient-to-br from-violet-600 to-indigo-700 relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-white/10 rounded-full blur-[100px]" />
-          <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-400/20 rounded-full blur-[80px]" />
-        </div>
-        <MotionDiv
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-          className="mx-auto max-w-3xl px-6 text-center relative z-10"
-        >
-          <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6 leading-[1.1] text-white">
-            Hayotingizni bugundan<br />
-            <span className="text-violet-200">
-              boshqaring
-            </span>
-          </h2>
-          <p className="text-white/70 text-lg mb-10 max-w-xl mx-auto">
-            Maqsadlar, odatlar, kitoblar, sog'liq — barchasini bir platformada. Bepul boshlang.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link to="/auth?tab=register">
-              <Button className="rounded-full h-13 px-8 text-[15px] font-semibold bg-white text-violet-700 hover:bg-white/95 shadow-xl shadow-violet-900/20 transition-all hover:-translate-y-0.5">
-                Bepul boshlash
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-            <Link to="/dashboard">
-              <Button
-                variant="outline"
-                className="rounded-full h-13 px-8 text-[15px] font-semibold border-white/30 text-white bg-transparent hover:bg-white/10 hover:border-white/50 transition-all"
-              >
-                Demo ko'rish
-              </Button>
-            </Link>
-          </div>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-[13px] text-white/50">
-            {["Kredit karta shart emas", "Bepul tarif mavjud", "O'zbek tilida"].map((item) => (
-              <span key={item} className="flex items-center gap-1.5">
-                <Check className="w-3.5 h-3.5 text-violet-200" />
-                {item}
-              </span>
-            ))}
-          </div>
-        </MotionDiv>
-      </section>
-
       {/* ── Founders Section ── */}
       <section className="py-28 bg-slate-50 border-t border-slate-100">
         <div className="mx-auto w-full max-w-7xl px-6 lg:px-8">
@@ -865,8 +758,8 @@ export default function LandingPage() {
             {/* Brand */}
             <div className="md:col-span-2">
               <p className="text-[17px] font-bold text-slate-900 flex items-center gap-2 mb-3">
-                <span className="w-6 h-6 rounded-[6px] bg-violet-600 inline-flex items-center justify-center">
-                  <Zap className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
+                <span className="w-7 h-7 rounded-[7px] bg-black inline-flex items-center justify-center">
+                  <span className="text-white font-extrabold text-[16px] leading-none">L</span>
                 </span>
                 LifeOS
               </p>
