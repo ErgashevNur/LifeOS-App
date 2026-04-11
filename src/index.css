@@ -5,8 +5,8 @@
 }
 
 :root {
-  background-color: #ffffff;
-  color: #0f172a; /* Slate 900 */
+  background-color: #F5F5F4;
+  color: #1a1a1a;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -23,34 +23,68 @@ body {
   padding: 0;
   font-family: var(--font-sans);
   min-height: 100%;
-  background-color: #f8fafc; /* Slate 50 */
+  background-color: #F5F5F4;
 }
 
 ::selection {
-  background-color: #0f172a;
+  background-color: #7C3AED;
   color: #fff;
 }
 
-/* Custom Scrollbar for sleek aesthetic */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9; /* Slate 100 */
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1; /* Slate 300 */
+  background: #D1D5DB;
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8; /* Slate 400 */
+  background: #9CA3AF;
 }
 
-/* Glassmorphism helpers for Light Mode */
+/* Hide scrollbar for sidebar */
+.sidebar-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.sidebar-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* No scrollbar utility */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Card styles */
+.notion-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 10px;
+}
+
+/* Subtle shadow */
+.shadow-soft {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-medium {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Glassmorphism */
 .glass-light {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(12px);
@@ -58,6 +92,68 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
+/* Legacy premium shadow */
 .shadow-premium {
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+/* Animated gradient for greeting */
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.gradient-animated {
+  background-size: 200% 200%;
+  animation: gradient-shift 6s ease infinite;
+}
+
+/* Sidebar active left border indicator */
+.nav-active-indicator {
+  position: relative;
+}
+.nav-active-indicator::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+/* Smooth page transitions */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: fadeInUp 0.2s ease-out;
+}
+
+/* Checkbox animation */
+@keyframes check-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.check-animate {
+  animation: check-pop 0.2s ease;
+}
+
+/* Progress bar shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }

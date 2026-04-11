@@ -1,365 +1,342 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { API_BASE_URL } from "@/lib/auth";
-import { useLifeOSData } from "@/lib/lifeos-store";
-import { cn } from "@/lib/utils";
-import { Globe, Bell, Smartphone, Watch, Calendar, UploadCloud, RotateCcw, Settings, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { useLifeOSData } from "@/lib/lifeos-store";
+import { useToast } from "@/hooks/use-toast";
+import { API_BASE_URL, clearAuthSession, getAuthSession } from "@/lib/auth";
+import { cn } from "@/lib/utils";
+import {
+  Bell, LogOut, RotateCcw, ChevronRight,
+  Shield, Zap, Skull, UploadCloud, User,
+  Globe, Camera,
+} from "lucide-react";
 
 const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
+const DISCIPLINE_MODES = [
+  {
+    key: "soft",
+    label: "Soft",
+    icon: Shield,
+    desc: "Yumshoq eslatmalar",
+    color: "text-sky-600",
+    bg: "bg-sky-50",
+    border: "ring-sky-200",
+    activeBg: "bg-sky-50",
+  },
+  {
+    key: "hard",
+    label: "Hard",
+    icon: Zap,
+    desc: "Qattiq nazorat",
+    color: "text-amber-600",
+    bg: "bg-amber-50",
+    border: "ring-amber-200",
+    activeBg: "bg-amber-50",
+  },
+  {
+    key: "brutal",
+    label: "Brutal",
+    icon: Skull,
+    desc: "Uzr yo'q.",
+    color: "text-red-600",
+    bg: "bg-red-50",
+    border: "ring-red-200",
+    activeBg: "bg-red-50",
+  },
+];
+
+// ── Toggle switch ─────────────────────────────────────────────────────────────
+function Toggle({ value, onChange }) {
+  return (
+    <button
+      onClick={() => onChange(!value)}
+      className={cn(
+        "relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ring-1",
+        value ? "bg-indigo-600 ring-indigo-600" : "bg-slate-200 ring-slate-200",
+      )}
+    >
+      <motion.div
+        className={cn("absolute top-1 w-4 h-4 rounded-full shadow-sm", value ? "bg-white" : "bg-white")}
+        animate={{ left: value ? "calc(100% - 20px)" : 4 }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+      />
+    </button>
+  );
+}
+
+// ── Section label ─────────────────────────────────────────────────────────────
+function SectionLabel({ children }) {
+  return (
+    <p className="text-[10px] font-black tracking-[0.3em] uppercase text-slate-400 mb-3">
+      {children}
+    </p>
+  );
+}
+
+// ── Row ───────────────────────────────────────────────────────────────────────
+function Row({ icon: Icon, label, right, last }) {
+  return (
+    <div className={cn("flex items-center justify-between py-3.5", !last && "border-b border-slate-100")}>
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center">
+          <Icon className="w-4 h-4 text-slate-500" />
+        </div>
+        <span className="text-sm font-semibold text-slate-700">{label}</span>
+      </div>
+      {right}
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
+  const navigate = useNavigate();
+  const session = getAuthSession();
   const { data, actions } = useLifeOSData();
   const { toast } = useToast();
-  const languages = data.content.settings.languages;
+  const [discipline, setDiscipline] = useState("hard");
   const [isResetting, setIsResetting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadedImageUrl, setUploadedImageUrl] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
 
-  const saveSettings = () => {
-    toast({
-      title: "Sozlamalar saqlandi",
-      description: "Tanlangan parametrlar muvaffaqiyatli yangilandi.",
-    });
-  };
+  const notifs = data.settings.notifications;
 
-  const handleResetState = async () => {
-    setIsResetting(true);
-    const nextState = await actions.resetState();
-    setIsResetting(false);
-
-    if (!nextState) {
-      toast({
-        variant: "destructive",
-        title: "Reset xatosi",
-        description: "Holatni tiklashda xatolik yuz berdi.",
-      });
-      return;
-    }
-
-    toast({
-      title: "State reset qilindi",
-      description: "Barcha ma'lumotlar backend default holatiga qaytarildi.",
-    });
-  };
-
-  const handleUploadImage = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-
-    if (!file) {
-      return;
-    }
-
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
     setIsUploading(true);
     const payload = await actions.uploadImage(file);
     setIsUploading(false);
-
-    if (!payload?.url) {
-      toast({
-        variant: "destructive",
-        title: "Upload xatosi",
-        description: "Rasmni yuklash muvaffaqiyatsiz tugadi.",
-      });
-      return;
+    if (payload?.url) {
+      setAvatarUrl(`${API_ORIGIN}${payload.url}`);
+      toast({ title: "Rasm muvaffaqiyatli yuklandi" });
+    } else {
+      toast({ variant: "destructive", title: "Rasm yuklashda xato" });
     }
-
-    const resolvedUrl = payload.url.startsWith("http")
-      ? payload.url
-      : `${API_ORIGIN}${payload.url}`;
-    setUploadedImageUrl(resolvedUrl);
-    toast({
-      title: "Rasm yuklandi",
-      description: "Fayl backendga muvaffaqiyatli yuborildi.",
-    });
   };
 
+  const handleReset = async () => {
+    setIsResetting(true);
+    await actions.resetState();
+    setIsResetting(false);
+    toast({ title: "Reset bajarildi", description: "Barcha ma'lumotlar qaytarildi." });
+  };
+
+  const handleLogout = () => {
+    clearAuthSession();
+    navigate("/auth?tab=login", { replace: true });
+  };
+
+  const initials = session
+    ? `${session.firstName?.[0] ?? ""}${session.lastName?.[0] ?? ""}`.toUpperCase()
+    : "U";
+
+  const fullName = session?.fullName
+    ?? [session?.firstName, session?.lastName].filter(Boolean).join(" ")
+    ?? "Foydalanuvchi";
+
   return (
-    <div className="space-y-8 max-w-4xl mx-auto pb-12">
-      <div className="flex items-center gap-4 mb-8">
-        <div className="h-14 w-14 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl shadow-slate-900/20">
-          <Settings className="h-7 w-7" />
+    <div className="min-h-full bg-slate-50">
+
+      {/* ── Page header ─────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 lg:px-8"
+      >
+        <div className="mx-auto max-w-2xl flex h-16 items-center">
+          <div>
+            <p className="text-[10px] font-black tracking-[0.3em] text-slate-400 uppercase">Settings</p>
+            <p className="text-base font-black text-slate-900 leading-tight mt-0.5">Sozlamalar</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Sozlamalar</h1>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Platforma boshqaruvi</p>
-        </div>
-      </div>
+      </motion.div>
 
-      <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-[2.5rem] bg-white overflow-hidden">
-        <CardHeader className="px-8 pt-8 pb-4">
-          <div className="flex items-center gap-3 mb-2">
-            <Globe className="h-5 w-5 text-indigo-500" />
-            <CardTitle className="text-xl font-extrabold tracking-tight">Til va mintaqa</CardTitle>
-          </div>
-          <p className="text-sm font-medium text-slate-500">Ilova interfeysi uchun tilni tanlang</p>
-        </CardHeader>
-        <CardContent className="px-8 pb-8 flex flex-wrap gap-3">
-          {languages.map((item) => {
-            const isActive = data.settings.language === item;
-            return (
-              <button
-                key={item}
-                type="button"
-                onClick={() => actions.setLanguage(item)}
-                className={cn(
-                  "rounded-full px-6 py-2.5 text-[11px] font-black tracking-widest uppercase transition-all flex items-center gap-2",
-                  isActive
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                    : "bg-slate-50 text-slate-500 hover:bg-slate-100 ring-1 ring-inset ring-slate-200 shadow-sm"
-                )}
-              >
-                {isActive && <CheckCircle2 className="w-3.5 h-3.5" />}
-                {item}
-              </button>
-            )
-          })}
-        </CardContent>
-      </Card>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="mx-auto max-w-2xl px-4 lg:px-8 py-6 flex flex-col gap-6"
+      >
 
-      <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-[2.5rem] bg-white overflow-hidden">
-        <CardHeader className="px-8 pt-8 pb-4">
-          <div className="flex items-center gap-3 mb-2">
-            <Bell className="h-5 w-5 text-amber-500" />
-            <CardTitle className="text-xl font-extrabold tracking-tight">Bildirishnomalar</CardTitle>
-          </div>
-          <p className="text-sm font-medium text-slate-500">Ilova bildirishnomalarini sozlash</p>
-        </CardHeader>
-        <CardContent className="px-8 pb-8 space-y-3">
-          <button
-            type="button"
-            onClick={() => actions.toggleNotification("habits")}
-            className={cn(
-              "flex w-full items-center justify-between rounded-[1.5rem] border-0 p-5 text-left transition-all shadow-sm ring-1 group",
-              data.settings.notifications.habits ? "bg-amber-50 ring-amber-200" : "bg-slate-50 ring-slate-100 hover:bg-white hover:ring-slate-200 hover:shadow-md"
-            )}
-          >
-            <span>
-              <p className={cn("font-bold text-lg transition-colors", data.settings.notifications.habits ? "text-amber-900" : "text-slate-900")}>Odat eslatmalari</p>
-              <p className={cn("text-[10px] font-black uppercase tracking-widest mt-1", data.settings.notifications.habits ? "text-amber-500/80" : "text-slate-400")}>Har kuni odat check-in uchun xabar</p>
-            </span>
-            <div className={cn(
-               "w-12 h-6 rounded-full p-1 transition-colors relative shadow-inner",
-               data.settings.notifications.habits ? "bg-amber-500" : "bg-slate-300"
-            )}>
-               <div className={cn(
-                  "w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ease-in-out absolute text-[0px]",
-                  data.settings.notifications.habits ? "translate-x-6" : "translate-x-0"
-               )}>Toggle</div>
-            </div>
-          </button>
+        {/* ── Profile card ──────────────────────────────────────── */}
+        <div className="rounded-3xl bg-white ring-1 ring-slate-100 shadow-sm overflow-hidden">
+          {/* cover gradient */}
+          <div className="h-20 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500" />
 
-          <button
-            type="button"
-            onClick={() => actions.toggleNotification("goals")}
-            className={cn(
-              "flex w-full items-center justify-between rounded-[1.5rem] border-0 p-5 text-left transition-all shadow-sm ring-1 group",
-              data.settings.notifications.goals ? "bg-amber-50 ring-amber-200" : "bg-slate-50 ring-slate-100 hover:bg-white hover:ring-slate-200 hover:shadow-md"
-            )}
-          >
-            <span>
-              <p className={cn("font-bold text-lg transition-colors", data.settings.notifications.goals ? "text-amber-900" : "text-slate-900")}>Maqsad progress xabari</p>
-              <p className={cn("text-[10px] font-black uppercase tracking-widest mt-1", data.settings.notifications.goals ? "text-amber-500/80" : "text-slate-400")}>Haftalik holat haqida bildirishnoma</p>
-            </span>
-            <div className={cn(
-               "w-12 h-6 rounded-full p-1 transition-colors relative shadow-inner",
-               data.settings.notifications.goals ? "bg-amber-500" : "bg-slate-300"
-            )}>
-               <div className={cn(
-                  "w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ease-in-out absolute text-[0px]",
-                  data.settings.notifications.goals ? "translate-x-6" : "translate-x-0"
-               )}>Toggle</div>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => actions.toggleNotification("assistant")}
-             className={cn(
-              "flex w-full items-center justify-between rounded-[1.5rem] border-0 p-5 text-left transition-all shadow-sm ring-1 group",
-              data.settings.notifications.assistant ? "bg-amber-50 ring-amber-200" : "bg-slate-50 ring-slate-100 hover:bg-white hover:ring-slate-200 hover:shadow-md"
-            )}
-          >
-            <span>
-              <p className={cn("font-bold text-lg transition-colors", data.settings.notifications.assistant ? "text-amber-900" : "text-slate-900")}>AI maslahat xabarlari</p>
-              <p className={cn("text-[10px] font-black uppercase tracking-widest mt-1", data.settings.notifications.assistant ? "text-amber-500/80" : "text-slate-400")}>Kunlik tavsiya va eslatmalar</p>
-            </span>
-            <div className={cn(
-               "w-12 h-6 rounded-full p-1 transition-colors relative shadow-inner",
-               data.settings.notifications.assistant ? "bg-amber-500" : "bg-slate-300"
-            )}>
-               <div className={cn(
-                  "w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ease-in-out absolute text-[0px]",
-                  data.settings.notifications.assistant ? "translate-x-6" : "translate-x-0"
-               )}>Toggle</div>
-            </div>
-          </button>
-        </CardContent>
-      </Card>
-
-      <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-[2.5rem] bg-white overflow-hidden">
-        <CardHeader className="px-8 pt-8 pb-4">
-          <div className="flex items-center gap-3 mb-2">
-            <Smartphone className="h-5 w-5 text-cyan-500" />
-            <CardTitle className="text-xl font-extrabold tracking-tight">Integratsiyalar</CardTitle>
-          </div>
-          <p className="text-sm font-medium text-slate-500">Tashqi xizmatlar bilan ishlash</p>
-        </CardHeader>
-        <CardContent className="px-8 pb-8 space-y-3">
-          <button
-            type="button"
-            onClick={() => actions.toggleIntegration("calendar")}
-            className={cn(
-              "flex w-full items-center justify-between rounded-[1.5rem] border-0 p-5 text-left transition-all shadow-sm ring-1 group",
-              data.settings.integrations.calendar ? "bg-cyan-50 ring-cyan-200" : "bg-slate-50 ring-slate-100 hover:bg-white hover:ring-slate-200 hover:shadow-md"
-            )}
-          >
-            <div className="flex items-center gap-4">
-              <div className={cn("p-2 rounded-xl transition-colors", data.settings.integrations.calendar ? "bg-cyan-500 text-white" : "bg-white text-slate-400 ring-1 ring-slate-200")}>
-                 <Calendar className="w-5 h-5" />
+          <div className="px-6 pb-6">
+            {/* avatar */}
+            <div className="relative -mt-10 mb-4 inline-block">
+              <div className="w-20 h-20 rounded-2xl ring-4 ring-white shadow-md overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+                {avatarUrl
+                  ? <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                  : <span className="text-2xl font-black text-white">{initials}</span>
+                }
               </div>
-              <div>
-                <p className={cn("font-bold text-lg transition-colors", data.settings.integrations.calendar ? "text-cyan-900" : "text-slate-900")}>Taqvim integratsiyasi</p>
-                <p className={cn("text-[10px] font-black uppercase tracking-widest mt-1", data.settings.integrations.calendar ? "text-cyan-600/80" : "text-slate-400")}>Google/Apple calendar sinxronlash</p>
-              </div>
-            </div>
-            <div className={cn(
-               "w-12 h-6 rounded-full p-1 transition-colors relative shadow-inner",
-               data.settings.integrations.calendar ? "bg-cyan-500" : "bg-slate-300"
-            )}>
-               <div className={cn(
-                  "w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ease-in-out absolute text-[0px]",
-                  data.settings.integrations.calendar ? "translate-x-6" : "translate-x-0"
-               )}>Toggle</div>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => actions.toggleIntegration("smartwatch")}
-            className={cn(
-              "flex w-full items-center justify-between rounded-[1.5rem] border-0 p-5 text-left transition-all shadow-sm ring-1 group",
-              data.settings.integrations.smartwatch ? "bg-cyan-50 ring-cyan-200" : "bg-slate-50 ring-slate-100 hover:bg-white hover:ring-slate-200 hover:shadow-md"
-            )}
-          >
-            <div className="flex items-center gap-4">
-              <div className={cn("p-2 rounded-xl transition-colors", data.settings.integrations.smartwatch ? "bg-cyan-500 text-white" : "bg-white text-slate-400 ring-1 ring-slate-200")}>
-                 <Watch className="w-5 h-5" />
-              </div>
-              <div>
-                <p className={cn("font-bold text-lg transition-colors", data.settings.integrations.smartwatch ? "text-cyan-900" : "text-slate-900")}>Smart soat</p>
-                <p className={cn("text-[10px] font-black uppercase tracking-widest mt-1", data.settings.integrations.smartwatch ? "text-cyan-600/80" : "text-slate-400")}>Sog'liq ko'rsatkichlarini olish</p>
-              </div>
-            </div>
-             <div className={cn(
-               "w-12 h-6 rounded-full p-1 transition-colors relative shadow-inner",
-               data.settings.integrations.smartwatch ? "bg-cyan-500" : "bg-slate-300"
-            )}>
-               <div className={cn(
-                  "w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ease-in-out absolute text-[0px]",
-                  data.settings.integrations.smartwatch ? "translate-x-6" : "translate-x-0"
-               )}>Toggle</div>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => actions.toggleIntegration("mobileSync")}
-            className={cn(
-              "flex w-full items-center justify-between rounded-[1.5rem] border-0 p-5 text-left transition-all shadow-sm ring-1 group",
-              data.settings.integrations.mobileSync ? "bg-cyan-50 ring-cyan-200" : "bg-slate-50 ring-slate-100 hover:bg-white hover:ring-slate-200 hover:shadow-md"
-            )}
-          >
-            <div className="flex items-center gap-4">
-              <div className={cn("p-2 rounded-xl transition-colors", data.settings.integrations.mobileSync ? "bg-cyan-500 text-white" : "bg-white text-slate-400 ring-1 ring-slate-200")}>
-                 <Smartphone className="w-5 h-5" />
-              </div>
-              <div>
-                <p className={cn("font-bold text-lg transition-colors", data.settings.integrations.mobileSync ? "text-cyan-900" : "text-slate-900")}>Mobil integratsiya</p>
-                <p className={cn("text-[10px] font-black uppercase tracking-widest mt-1", data.settings.integrations.mobileSync ? "text-cyan-600/80" : "text-slate-400")}>Ma'lumotlarni telefonga uzatish</p>
-              </div>
-            </div>
-            <div className={cn(
-               "w-12 h-6 rounded-full p-1 transition-colors relative shadow-inner",
-               data.settings.integrations.mobileSync ? "bg-cyan-500" : "bg-slate-300"
-            )}>
-               <div className={cn(
-                  "w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ease-in-out absolute text-[0px]",
-                  data.settings.integrations.mobileSync ? "translate-x-6" : "translate-x-0"
-               )}>Toggle</div>
-            </div>
-          </button>
-        </CardContent>
-      </Card>
-
-      <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-[2.5rem] bg-slate-50 overflow-hidden">
-        <CardHeader className="px-8 pt-8 pb-4">
-          <CardTitle className="text-xl font-extrabold tracking-tight text-slate-900">Backend amallari</CardTitle>
-          <p className="text-sm font-medium text-slate-500">Tizim holati va fayllar</p>
-        </CardHeader>
-        <CardContent className="px-8 pb-8 space-y-6">
-          <div className="p-6 rounded-[1.5rem] bg-white ring-1 ring-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <p className="font-bold text-slate-900 mb-1">State Reset</p>
-              <p className="text-xs text-slate-500">Barcha ma'lumotlarni backend defaultiga qaytaradi.</p>
-            </div>
-            <Button
-              variant="destructive"
-              onClick={handleResetState}
-              disabled={isResetting}
-              className="rounded-xl h-12 px-6 font-bold w-full sm:w-auto"
-            >
-              <RotateCcw className={cn("w-4 h-4 mr-2", isResetting && "animate-spin")} />
-              {isResetting ? "Reset qilinmoqda..." : "State reset"}
-            </Button>
-          </div>
-
-          <div className="p-6 rounded-[1.5rem] bg-white ring-1 ring-slate-200 shadow-sm flex flex-col gap-4">
-             <div>
-               <p className="font-bold text-slate-900 mb-1">Rasm yuklash</p>
-               <p className="text-xs text-slate-500">Fayllarni serverga yuborish test uchun</p>
-             </div>
-            <div className="relative">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleUploadImage}
-                disabled={isUploading}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              />
-              <div className={cn(
-                "w-full h-32 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-colors",
-                isUploading ? "border-indigo-300 bg-indigo-50 text-indigo-500" : "border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-500"
-              )}>
-                 <UploadCloud className={cn("w-8 h-8 mb-2", isUploading && "animate-bounce")} />
-                 <p className="text-sm font-bold">{isUploading ? "Yuklanmoqda..." : "Faylni tanlang yoki shu yerga tashlang"}</p>
-              </div>
-            </div>
-            
-            {uploadedImageUrl ? (
-              <div className="mt-4 space-y-3 p-4 rounded-2xl bg-slate-50 ring-1 ring-slate-200">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 break-all">{uploadedImageUrl}</p>
-                <img
-                  src={uploadedImageUrl}
-                  alt="Uploaded preview"
-                  className="h-32 w-auto rounded-xl border-0 shadow-sm ring-1 ring-slate-200 object-cover"
+              <label className="absolute -bottom-1 -right-1 w-7 h-7 rounded-xl bg-indigo-600 hover:bg-indigo-500 flex items-center justify-center cursor-pointer transition-colors shadow-md">
+                <Camera className="w-3.5 h-3.5 text-white" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleUpload}
+                  disabled={isUploading}
                 />
-              </div>
-            ) : null}
-          </div>
-        </CardContent>
-      </Card>
+              </label>
+            </div>
 
-      <div className="flex justify-end pt-4">
-        <Button 
-          onClick={saveSettings}
-          className="rounded-2xl h-14 px-8 font-bold text-lg bg-slate-900 hover:bg-slate-800 shadow-xl shadow-slate-900/20 active:scale-95 transition-transform"
-        >
-          O'zgarishlarni Saqlash
-        </Button>
-      </div>
+            <p className="text-lg font-black text-slate-900">{fullName}</p>
+            <p className="text-sm text-slate-500 font-medium">{session?.email}</p>
+
+            <div className="flex flex-wrap gap-2 mt-3">
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-indigo-600">
+                <User className="w-3 h-3" />
+                {session?.role === "admin" ? "Admin" : "Member"}
+              </span>
+              {session?.profession && (
+                <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-500">
+                  {session.profession}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Notifications ─────────────────────────────────────── */}
+        <div>
+          <SectionLabel>Bildirishnomalar</SectionLabel>
+          <div className="rounded-2xl bg-white ring-1 ring-slate-100 shadow-sm px-4">
+            <Row
+              icon={Bell}
+              label="Odatlar eslatmasi"
+              right={
+                <Toggle
+                  value={notifs.habits}
+                  onChange={(v) => actions.toggleNotification("habits", v)}
+                />
+              }
+            />
+            <Row
+              icon={Bell}
+              label="Maqsadlar eslatmasi"
+              right={
+                <Toggle
+                  value={notifs.goals}
+                  onChange={(v) => actions.toggleNotification("goals", v)}
+                />
+              }
+            />
+            <Row
+              icon={Bell}
+              label="AI Murabbiy"
+              last
+              right={
+                <Toggle
+                  value={notifs.assistant}
+                  onChange={(v) => actions.toggleNotification("assistant", v)}
+                />
+              }
+            />
+          </div>
+        </div>
+
+        {/* ── Discipline mode ───────────────────────────────────── */}
+        <div>
+          <SectionLabel>Intizom rejimi</SectionLabel>
+          <div className="grid grid-cols-3 gap-3">
+            {DISCIPLINE_MODES.map(({ key, label, icon: Icon, desc, color, bg, border, activeBg }) => {
+              const active = discipline === key;
+              return (
+                <motion.button
+                  key={key}
+                  onClick={() => setDiscipline(key)}
+                  whileTap={{ scale: 0.95 }}
+                  className={cn(
+                    "flex flex-col items-center gap-2 rounded-2xl p-4 ring-1 transition-all duration-150",
+                    active
+                      ? `${activeBg} ${border} shadow-sm`
+                      : "bg-white ring-slate-100 hover:ring-slate-200",
+                  )}
+                >
+                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", active ? bg : "bg-slate-100")}>
+                    <Icon className={cn("w-5 h-5", active ? color : "text-slate-400")} />
+                  </div>
+                  <span className={cn("text-xs font-black", active ? color : "text-slate-500")}>
+                    {label}
+                  </span>
+                  <span className="text-[9px] text-center font-medium text-slate-400 leading-tight">
+                    {desc}
+                  </span>
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Language ──────────────────────────────────────────── */}
+        {data.content.settings.languages?.length > 0 && (
+          <div>
+            <SectionLabel>Til</SectionLabel>
+            <div className="rounded-2xl bg-white ring-1 ring-slate-100 shadow-sm p-2 flex gap-2">
+              {data.content.settings.languages.map((lang) => {
+                const active = data.settings.language === lang.code;
+                return (
+                  <button
+                    key={lang.code}
+                    onClick={() => actions.setLanguage(lang.code)}
+                    className={cn(
+                      "flex-1 py-2.5 rounded-xl text-xs font-black transition-all",
+                      active
+                        ? "bg-indigo-600 text-white shadow-sm"
+                        : "text-slate-500 hover:bg-slate-50",
+                    )}
+                  >
+                    {lang.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Danger zone ───────────────────────────────────────── */}
+        <div>
+          <SectionLabel>Xavfli zona</SectionLabel>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={handleReset}
+              disabled={isResetting}
+              className="w-full flex items-center justify-between rounded-2xl bg-white ring-1 ring-slate-100 px-5 py-4 hover:ring-red-100 hover:bg-red-50/50 transition-all disabled:opacity-50 group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center">
+                  <RotateCcw className="w-4 h-4 text-red-500" />
+                </div>
+                <span className="text-sm font-semibold text-slate-700 group-hover:text-red-600 transition-colors">
+                  {isResetting ? "Tiklanmoqda..." : "Ma'lumotlarni reset qilish"}
+                </span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </button>
+
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-between rounded-2xl bg-red-50 ring-1 ring-red-100 px-5 py-4 hover:bg-red-100 transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center">
+                  <LogOut className="w-4 h-4 text-red-600" />
+                </div>
+                <span className="text-sm font-bold text-red-600">Tizimdan chiqish</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-red-400" />
+            </button>
+          </div>
+        </div>
+
+      </motion.div>
     </div>
   );
 }

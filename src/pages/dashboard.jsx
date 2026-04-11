@@ -1,212 +1,472 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  ArrowRight, 
-  CheckCircle2, 
-  Circle, 
-  Plus, 
-  Target, 
-  Flame, 
-  Clock, 
-  PieChart,
-  Layout,
-  MessageSquare,
-  Send,
+import {
+  ArrowUpRight,
+  Check,
+  Plus,
+  Target,
+  Flame,
+  Clock,
   Zap,
   TrendingUp,
-  Wallet
+  Wallet,
+  MessageSquare,
+  Send,
+  BookOpen,
+  Repeat,
+  MoreHorizontal,
+  ChevronRight,
+  Activity,
+  Trophy,
+  Users,
+  Sparkles,
+  Circle
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useLifeOSData } from "@/lib/lifeos-store";
+import { getAuthSession } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
-function BentoCard({ children, className, title, subtitle, icon: Icon }) {
+// ── Reusable Card ──────────────────────────────────────────────
+function Card({ children, className }) {
   return (
-    <div className={cn("bg-white rounded-[2.5rem] p-8 shadow-premium ring-1 ring-slate-100 hover:ring-indigo-500/10 transition-all", className)}>
-      {(title || Icon) && (
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            {title && <h3 className="text-xl font-black tracking-tight text-slate-900">{title}</h3>}
-            {subtitle && <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{subtitle}</p>}
-          </div>
-          {Icon && (
-            <div className="p-3 bg-slate-50 rounded-2xl text-slate-900 group-hover:scale-110 transition-transform">
-              <Icon className="w-5 h-5" />
-            </div>
-          )}
-        </div>
+    <div
+      className={cn(
+        "bg-white rounded-xl border border-black/[0.06] shadow-soft",
+        className
       )}
+    >
       {children}
     </div>
   );
 }
 
-function StatCard({ label, value, icon: Icon, color }) {
+// ── Section Header ─────────────────────────────────────────────
+function CardHeader({ title, subtitle, icon: Icon, iconColor, action }) {
   return (
-    <div className="bg-white rounded-[2rem] p-8 shadow-premium ring-1 ring-slate-100 group">
-      <div className="flex items-center justify-between">
-        <div className={cn("p-3 rounded-2xl", color)}>
-          <Icon className="w-5 h-5" />
+    <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-50">
+      <div className="flex items-center gap-2.5">
+        {Icon && (
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: `${iconColor}18` }}
+          >
+            <Icon className="w-3.5 h-3.5" style={{ color: iconColor }} strokeWidth={2} />
+          </div>
+        )}
+        <div>
+          <p className="text-[13.5px] font-semibold text-gray-800 leading-tight">{title}</p>
+          {subtitle && (
+            <p className="text-[11px] text-gray-400 mt-0.5">{subtitle}</p>
+          )}
         </div>
-        <TrendingUp className="w-4 h-4 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
-      <div className="mt-8">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{label}</p>
-        <p className="mt-2 text-4xl font-black tracking-tighter text-slate-900 group-hover:translate-x-1 transition-transform">{value}</p>
-      </div>
+      {action && action}
     </div>
   );
 }
 
+// ── Stat Card ──────────────────────────────────────────────────
+function StatCard({ label, value, icon: Icon, color, change }) {
+  return (
+    <Card className="p-5 hover:shadow-medium transition-shadow duration-200 cursor-default group">
+      <div className="flex items-start justify-between mb-4">
+        <div
+          className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: `${color}15` }}
+        >
+          <Icon className="w-4.5 h-4.5" style={{ color }} strokeWidth={2} />
+        </div>
+        <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+          {change}
+        </span>
+      </div>
+      <p className="text-2xl font-bold text-gray-900 tracking-tight">{value}</p>
+      <p className="text-[12px] text-gray-500 font-medium mt-1">{label}</p>
+    </Card>
+  );
+}
+
+// ── Progress Bar ───────────────────────────────────────────────
+function ProgressBar({ value, color }) {
+  return (
+    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+      <motion.div
+        initial={{ width: 0 }}
+        animate={{ width: `${value}%` }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="h-full rounded-full"
+        style={{ backgroundColor: color }}
+      />
+    </div>
+  );
+}
+
+// ── Main Dashboard ─────────────────────────────────────────────
 export default function DashboardPage() {
   const { t } = useTranslation();
-  const { data, actions, selectors, dashboardSummary } = useLifeOSData();
+  const { data, actions, dashboardSummary } = useLifeOSData();
+  const session = getAuthSession();
   const [newGoal, setNewGoal] = useState("");
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState([
-    { id: 1, user: "Asadbek", text: "Maqsadlarga yetish uchun reja eng muhimi!", time: "2m ago" },
-    { id: 2, user: "Muhammad", text: "LifeOS'dagi moliya markazi juda foydali bo'libdi.", time: "10m ago" }
+    { id: 1, user: "Asadbek", avatar: "A", color: "#7C3AED", text: "Maqsadlarga yetish uchun reja eng muhimi!", time: "2m ago" },
+    { id: 2, user: "Muhammad", avatar: "M", color: "#3B82F6", text: "LifeOS'dagi moliya markazi juda foydali bo'libdi.", time: "10m ago" },
+    { id: 3, user: "Sardor", avatar: "S", color: "#10B981", text: "Odatlar bo'limini kunlik ishlataman, juda qulay!", time: "25m ago" },
   ]);
 
+  const today = new Date().toLocaleDateString("uz-UZ", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+
   const handleAddComment = () => {
-    if (newComment.trim()) {
-      setComments([{ id: Date.now(), user: "Siz", text: newComment, time: "Hozir" }, ...comments]);
-      setNewComment("");
-    }
+    if (!newComment.trim()) return;
+    setComments([
+      {
+        id: Date.now(),
+        user: session?.firstName ?? "Siz",
+        avatar: session?.firstName?.[0] ?? "S",
+        color: "#7C3AED",
+        text: newComment,
+        time: "Hozir",
+      },
+      ...comments,
+    ]);
+    setNewComment("");
   };
 
+  const handleAddGoal = () => {
+    if (!newGoal.trim()) return;
+    actions.addGoal({
+      title: newGoal,
+      period: "Kunlik",
+      targetValue: 1,
+      deadline: new Date(new Date().getFullYear(), 11, 31).toISOString().slice(0, 10),
+    });
+    setNewGoal("");
+  };
+
+  const completedTasks = data.dashboard.tasks.filter((t) => t.done).length;
+  const totalTasks = data.dashboard.tasks.length;
+
   return (
-    <div className="space-y-12">
-      {/* Strategic Goals Header */}
-      <div className="grid gap-8 lg:grid-cols-3">
-        <BentoCard className="lg:col-span-2 bg-slate-900 text-white ring-slate-800 shadow-2xl shadow-slate-900/20">
-          <div className="space-y-6">
-            <Badge className="bg-indigo-500 text-white px-4 py-1.5 rounded-full font-black text-[9px] uppercase tracking-widest border-0">
-              STRATEGIK REJA
-            </Badge>
-            <h2 className="text-4xl lg:text-5xl font-black tracking-tighter leading-tight">
-              {t('dashboard.goals_center.header')}
-            </h2>
-            <p className="text-xl text-slate-400 font-medium max-w-lg">
-              {t('dashboard.goals_center.subtitle')}
+    <div className="space-y-5">
+
+      {/* ── Greeting Banner ───────────────────────────── */}
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 gradient-animated p-6 text-white shadow-medium">
+        <div className="absolute right-0 top-0 w-64 h-full opacity-10">
+          <div className="absolute top-2 right-8 w-32 h-32 rounded-full bg-white blur-3xl" />
+          <div className="absolute bottom-2 right-24 w-20 h-20 rounded-full bg-white blur-2xl" />
+        </div>
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center gap-5">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="w-4 h-4 text-violet-200" strokeWidth={1.5} />
+              <p className="text-violet-200 text-[13px] font-medium">{today}</p>
+            </div>
+            <h1 className="text-xl lg:text-2xl font-bold leading-snug">
+              Salom, {session?.firstName ?? "Do'stim"}! 👋
+            </h1>
+            <p className="text-violet-200/80 text-sm mt-1">
+              Bugun {completedTasks}/{totalTasks} vazifa bajarildi. Davom eting!
             </p>
-            
-            <div className="flex gap-4 mt-8">
-              <Input 
-                value={newGoal}
-                onChange={(e) => setNewGoal(e.target.value)}
-                placeholder={t('dashboard.goals_center.placeholder')}
-                className="h-16 rounded-2xl bg-white/5 border-white/10 text-white placeholder:text-slate-600 px-6 focus-visible:ring-indigo-500"
-              />
-              <Button 
-                onClick={() => {
-                  if (newGoal.trim()) {
-                    actions.addGoal({ title: newGoal, category: 'Personal', targetDate: new Date().toISOString() });
-                    setNewGoal("");
-                  }
-                }}
-                className="h-16 px-8 rounded-2xl bg-white text-slate-950 font-black uppercase text-xs tracking-widest hover:bg-indigo-500 hover:text-white transition-all shadow-xl"
-              >
-                {t('dashboard.goals_center.add')}
-              </Button>
-            </div>
           </div>
-        </BentoCard>
 
-        <BentoCard icon={Wallet} title={t('dashboard.finance.header')}>
-          <div className="mt-4 space-y-6">
-            <div>
-              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{t('dashboard.finance.wealth')}</p>
-              <p className="text-5xl font-black tracking-tighter text-slate-900 mt-2">92%</p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-end text-[10px] font-black uppercase text-slate-500">
-                <span>{t('dashboard.finance.debt')}</span>
-                <span>$1,200 Left</span>
-              </div>
-              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full w-[70%] bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.3)]" />
-              </div>
-            </div>
+          <div className="flex gap-2 w-full lg:w-auto">
+            <input
+              value={newGoal}
+              onChange={(e) => setNewGoal(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddGoal()}
+              placeholder="Yangi maqsad qo'shing..."
+              className="flex-1 lg:w-64 h-10 rounded-lg bg-white/10 border border-white/20 text-white placeholder:text-white/40 text-[13px] font-medium px-4 outline-none focus:bg-white/15 focus:border-white/40 transition-all"
+            />
+            <button
+              onClick={handleAddGoal}
+              className="h-10 px-4 rounded-lg bg-white text-violet-700 text-[13px] font-bold hover:bg-violet-50 transition-colors flex items-center gap-1.5 flex-shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+              Qo'shish
+            </button>
           </div>
-        </BentoCard>
+        </div>
       </div>
 
-      {/* Stats Quick View */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label={t('dashboard.metrics.productivity')} value="88%" icon={Zap} color="bg-indigo-50 text-indigo-600" />
-        <StatCard label={t('dashboard.metrics.streaks')} value={dashboardSummary.streak} icon={Flame} color="bg-orange-50 text-orange-600" />
-        <StatCard label={t('dashboard.metrics.focus')} value="6.4h" icon={Clock} color="bg-cyan-50 text-cyan-600" />
-        <StatCard label={t('dashboard.metrics.goals')} value={dashboardSummary.goalsCount} icon={Target} color="bg-emerald-50 text-emerald-600" />
+      {/* ── Stats Row ─────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label={t("dashboard.metrics.productivity")}
+          value="88%"
+          icon={Zap}
+          color="#7C3AED"
+          change="+4%"
+        />
+        <StatCard
+          label={t("dashboard.metrics.streaks")}
+          value={`${dashboardSummary.streak}🔥`}
+          icon={Flame}
+          color="#F97316"
+          change="+2"
+        />
+        <StatCard
+          label={t("dashboard.metrics.focus")}
+          value="6.4h"
+          icon={Clock}
+          color="#0EA5E9"
+          change="+1.2h"
+        />
+        <StatCard
+          label={t("dashboard.metrics.goals")}
+          value={dashboardSummary.goalsCount}
+          icon={Target}
+          color="#10B981"
+          change="Active"
+        />
       </div>
 
-      {/* Bottom Area: Tasks & Community Pulse */}
-      <div className="grid gap-8 xl:grid-cols-[1fr_420px]">
-        <BentoCard icon={Layout} title={t('dashboard.tasks.header')} subtitle={t('dashboard.tasks.completed')}>
-          <div className="space-y-4">
-            <AnimatePresence mode="popLayout">
-              {data.dashboard.tasks.map((task) => (
-                <motion.div
-                  key={task.id}
-                  layout
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-4 p-5 rounded-3xl bg-slate-50 border border-slate-100 group hover:ring-1 hover:ring-indigo-500/20 transition-all cursor-pointer"
-                  onClick={() => actions.toggleDashboardTask(task.id)}
+      {/* ── Main Grid ─────────────────────────────────── */}
+      <div className="grid lg:grid-cols-3 gap-5">
+
+        {/* Left Column (2 cols) */}
+        <div className="lg:col-span-2 space-y-5">
+
+          {/* Tasks Widget */}
+          <Card>
+            <CardHeader
+              title={t("dashboard.tasks.header")}
+              subtitle={`${completedTasks}/${totalTasks} ${t("dashboard.tasks.completed")}`}
+              icon={Check}
+              iconColor="#7C3AED"
+              action={
+                <Link
+                  to="/goals"
+                  className="flex items-center gap-1 text-[12px] text-violet-600 font-semibold hover:text-violet-700 transition-colors"
                 >
-                  <div className={cn(
-                    "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
-                    task.done ? "bg-slate-900 border-slate-900" : "border-slate-300"
-                  )}>
-                    {task.done && <CheckCircle2 className="h-4 w-4 text-white" />}
-                  </div>
-                  <span className={cn("text-lg font-bold tracking-tight", task.done ? "text-slate-400 line-through" : "text-slate-900")}>
-                    {task.title}
-                  </span>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        </BentoCard>
+                  Barchasi
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              }
+            />
 
-        {/* Community Pulse (Comments Section) */}
-        <BentoCard icon={MessageSquare} title={t('dashboard.community_pulse.header')} subtitle={t('dashboard.community_pulse.subtitle')}>
-          <div className="flex flex-col h-[400px]">
-            <div className="flex-1 overflow-y-auto space-y-6 no-scrollbar pr-2 mb-6">
-              {comments.map((comment) => (
-                <div key={comment.id} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black uppercase text-indigo-600">{comment.user}</span>
-                    <span className="text-[10px] font-bold text-slate-400">{comment.time}</span>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                    <p className="text-sm font-bold text-slate-700 leading-relaxed">{comment.text}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            <div className="relative">
-              <Input
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder={t('dashboard.community_pulse.comment_placeholder')}
-                className="h-14 rounded-2xl bg-slate-100 border-0 px-6 pr-14 font-bold text-sm focus-visible:ring-indigo-500"
-                onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
+            <div className="px-5 py-3 border-b border-gray-50">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] text-gray-500 font-medium">Kunlik progress</span>
+                <span className="text-[11px] font-bold text-gray-700">
+                  {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
+                </span>
+              </div>
+              <ProgressBar
+                value={totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}
+                color="#7C3AED"
               />
-              <button 
-                onClick={handleAddComment}
-                className="absolute right-2 top-2 h-10 w-10 bg-slate-900 text-white rounded-xl flex items-center justify-center hover:scale-105 transition-transform"
-              >
-                <Send className="w-4 h-4" />
-              </button>
             </div>
+
+            <div className="p-3 space-y-1">
+              <AnimatePresence mode="popLayout">
+                {data.dashboard.tasks.map((task) => (
+                  <motion.div
+                    key={task.id}
+                    layout
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.15 }}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer group transition-colors",
+                      task.done ? "hover:bg-gray-50/80" : "hover:bg-gray-50"
+                    )}
+                    onClick={() => actions.toggleDashboardTask(task.id)}
+                  >
+                    <div
+                      className={cn(
+                        "w-4.5 h-4.5 rounded-[5px] border-2 flex items-center justify-center transition-all duration-150 flex-shrink-0",
+                        task.done
+                          ? "bg-violet-600 border-violet-600"
+                          : "border-gray-300 group-hover:border-gray-400"
+                      )}
+                    >
+                      {task.done && (
+                        <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                      )}
+                    </div>
+
+                    <span
+                      className={cn(
+                        "text-[13.5px] font-medium flex-1 transition-colors",
+                        task.done ? "line-through text-gray-400" : "text-gray-700"
+                      )}
+                    >
+                      {task.title}
+                    </span>
+
+                    {task.done && (
+                      <span className="text-[10px] text-gray-400 font-medium">Bajarildi ✓</span>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {data.dashboard.tasks.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                  <Circle className="w-8 h-8 mb-2 opacity-30" strokeWidth={1} />
+                  <p className="text-[13px] font-medium">Hali vazifa yo'q</p>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Modules Quick View */}
+          <div className="grid sm:grid-cols-3 gap-4">
+            {[
+              { label: "Kitoblar", icon: BookOpen, color: "#F59E0B", to: "/books", stat: `${data.books?.length ?? 0} kitob`, sub: "kuzatilmoqda" },
+              { label: "Odatlar", icon: Repeat, color: "#10B981", to: "/habits", stat: `${data.habits?.length ?? 0} odat`, sub: "faol" },
+              { label: "Mahorat", icon: Trophy, color: "#9333EA", to: "/mastery", stat: "Focus", sub: "yozing" },
+            ].map((mod) => (
+              <Link to={mod.to} key={mod.to}>
+                <Card className="p-4 hover:shadow-medium transition-all duration-200 cursor-pointer group hover:-translate-y-0.5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: `${mod.color}15` }}
+                    >
+                      <mod.icon className="w-4 h-4" style={{ color: mod.color }} strokeWidth={2} />
+                    </div>
+                    <ArrowUpRight
+                      className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-500 transition-colors"
+                    />
+                  </div>
+                  <p className="text-[15px] font-bold text-gray-800">{mod.stat}</p>
+                  <p className="text-[11px] text-gray-400 font-medium mt-0.5">{mod.sub}</p>
+                </Card>
+              </Link>
+            ))}
           </div>
-        </BentoCard>
+        </div>
+
+        {/* Right Column (1 col) */}
+        <div className="space-y-5">
+
+          {/* Finance Widget */}
+          <Card>
+            <CardHeader
+              title={t("dashboard.finance.header")}
+              icon={Wallet}
+              iconColor="#14B8A6"
+              action={
+                <Link to="/finance">
+                  <ArrowUpRight className="w-4 h-4 text-gray-400 hover:text-gray-600 transition-colors" />
+                </Link>
+              }
+            />
+            <div className="p-5 space-y-4">
+              <div>
+                <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wider mb-1">
+                  {t("dashboard.finance.wealth")}
+                </p>
+                <div className="flex items-end gap-2">
+                  <p className="text-3xl font-bold text-gray-900">92%</p>
+                  <span className="text-[11px] text-emerald-600 font-semibold mb-1 bg-emerald-50 px-2 py-0.5 rounded-full">
+                    +3%
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="text-[11px] text-gray-500 font-medium">
+                    {t("dashboard.finance.debt")}
+                  </span>
+                  <span className="text-[11px] font-semibold text-gray-600">$1,200</span>
+                </div>
+                <ProgressBar value={70} color="#14B8A6" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                {[
+                  { label: "Daromad", value: "$4,200", color: "#10B981" },
+                  { label: "Xarajat", value: "$1,800", color: "#F43F5E" },
+                ].map((item) => (
+                  <div key={item.label} className="bg-gray-50/70 rounded-lg p-3">
+                    <p className="text-[11px] text-gray-500 font-medium">{item.label}</p>
+                    <p
+                      className="text-[15px] font-bold mt-0.5"
+                      style={{ color: item.color }}
+                    >
+                      {item.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          {/* Community Pulse */}
+          <Card>
+            <CardHeader
+              title={t("dashboard.community_pulse.header")}
+              subtitle={t("dashboard.community_pulse.subtitle")}
+              icon={MessageSquare}
+              iconColor="#EC4899"
+            />
+
+            <div className="flex flex-col" style={{ height: 320 }}>
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 no-scrollbar">
+                <AnimatePresence>
+                  {comments.map((comment, i) => (
+                    <motion.div
+                      key={comment.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04 }}
+                      className="flex gap-2.5"
+                    >
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 mt-0.5"
+                        style={{ backgroundColor: comment.color }}
+                      >
+                        {comment.avatar}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[12px] font-semibold text-gray-700">
+                            {comment.user}
+                          </span>
+                          <span className="text-[10px] text-gray-400">{comment.time}</span>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg px-3 py-2">
+                          <p className="text-[12.5px] text-gray-600 leading-relaxed">
+                            {comment.text}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+
+              <div className="px-4 pb-4 pt-2 border-t border-gray-50">
+                <div className="flex gap-2">
+                  <input
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
+                    placeholder={t("dashboard.community_pulse.comment_placeholder")}
+                    className="flex-1 h-9 rounded-lg bg-gray-50 border border-gray-100 text-[13px] text-gray-700 placeholder:text-gray-400 px-3 outline-none focus:border-violet-300 focus:bg-white transition-all"
+                  />
+                  <button
+                    onClick={handleAddComment}
+                    className="w-9 h-9 rounded-lg bg-violet-600 text-white flex items-center justify-center hover:bg-violet-700 transition-colors flex-shrink-0"
+                  >
+                    <Send className="w-3.5 h-3.5" strokeWidth={2} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
     </div>
   );
