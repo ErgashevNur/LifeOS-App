@@ -142,8 +142,9 @@ export default function DashboardPage() {
     if (!newGoal.trim()) return;
     actions.addGoal({
       title: newGoal,
-      category: "Personal",
-      targetDate: new Date().toISOString(),
+      period: "Kunlik",
+      targetValue: 1,
+      deadline: new Date(new Date().getFullYear(), 11, 31).toISOString().slice(0, 10),
     });
     setNewGoal("");
   };
@@ -156,7 +157,6 @@ export default function DashboardPage() {
 
       {/* ── Greeting Banner ───────────────────────────── */}
       <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 gradient-animated p-6 text-white shadow-medium">
-        {/* Background decorations */}
         <div className="absolute right-0 top-0 w-64 h-full opacity-10">
           <div className="absolute top-2 right-8 w-32 h-32 rounded-full bg-white blur-3xl" />
           <div className="absolute bottom-2 right-24 w-20 h-20 rounded-full bg-white blur-2xl" />
@@ -176,7 +176,6 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          {/* Quick goal input */}
           <div className="flex gap-2 w-full lg:w-auto">
             <input
               value={newGoal}
@@ -252,7 +251,6 @@ export default function DashboardPage() {
               }
             />
 
-            {/* Progress indicator */}
             <div className="px-5 py-3 border-b border-gray-50">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[11px] text-gray-500 font-medium">Kunlik progress</span>
@@ -282,7 +280,6 @@ export default function DashboardPage() {
                     )}
                     onClick={() => actions.toggleDashboardTask(task.id)}
                   >
-                    {/* Checkbox */}
                     <div
                       className={cn(
                         "w-4.5 h-4.5 rounded-[5px] border-2 flex items-center justify-center transition-all duration-150 flex-shrink-0",
@@ -416,7 +413,6 @@ export default function DashboardPage() {
             />
 
             <div className="flex flex-col" style={{ height: 320 }}>
-              {/* Comments list */}
               <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 no-scrollbar">
                 <AnimatePresence>
                   {comments.map((comment, i) => (
@@ -451,7 +447,6 @@ export default function DashboardPage() {
                 </AnimatePresence>
               </div>
 
-              {/* Input */}
               <div className="px-4 pb-4 pt-2 border-t border-gray-50">
                 <div className="flex gap-2">
                   <input

@@ -14,7 +14,6 @@ function healthScore(log) {
   return clamp(Math.round((c + w + s) / 3), 0, 100);
 }
 
-// ── SVG line chart ─────────────────────────────────────────────────────────
 function LineChart({ points, color = "#00FFAA" }) {
   if (!points || points.length < 2) {
     return (
@@ -55,7 +54,6 @@ function LineChart({ points, color = "#00FFAA" }) {
   );
 }
 
-// ── Weekly bar chart ────────────────────────────────────────────────────────
 function WeekBars({ logs }) {
   const padded = [...Array(7)].map((_, i) => logs[logs.length - 7 + i] ?? null);
 
@@ -82,7 +80,6 @@ function WeekBars({ logs }) {
   );
 }
 
-// ── Score ring ──────────────────────────────────────────────────────────────
 function ScoreRing({ score }) {
   const r = 42;
   const circ = 2 * Math.PI * r;
