@@ -269,6 +269,36 @@ export class AppController {
   }
 
   @Public()
+  @Post("auth/register/google")
+  @ApiTags("Auth")
+  @ApiOperation({
+    summary: "Register with Google ID token and return access/refresh tokens",
+    description:
+      "Google ID token yuborilganda yangi account yaratiladi. Agar email avval ro'yxatdan o'tgan bo'lsa, mavjud account uchun yangi sessiya qaytariladi.",
+  })
+  @ApiSuccess({
+    message: "Google orqali ro'yxatdan o'tish muvaffaqiyatli bajarildi.",
+    status: 201,
+  })
+  registerWithGoogle(@Body() dto: GoogleAuthDto) {
+    return this.appService.authWithGoogle(dto);
+  }
+
+  @Public()
+  @Post("auth/login/google")
+  @HttpCode(200)
+  @ApiTags("Auth")
+  @ApiOperation({
+    summary: "Login with Google ID token and return access/refresh tokens",
+    description:
+      "Google ID token orqali tizimga kirish endpointi. Yangi account bo'lsa ham sessiya yaratiladi.",
+  })
+  @ApiSuccess({ message: "Google orqali kirish muvaffaqiyatli bajarildi." })
+  loginWithGoogle(@Body() dto: GoogleAuthDto) {
+    return this.appService.authWithGoogle(dto);
+  }
+
+  @Public()
   @Post("auth/google")
   @HttpCode(200)
   @ApiTags("Auth")
@@ -302,6 +332,21 @@ export class AppController {
   @ApiSuccess({ message: "Access token muvaffaqiyatli yangilandi." })
   refreshTokenAlias(@Body() dto: RefreshTokenDto) {
     return this.appService.refreshAccessToken(dto);
+  }
+
+  @Get("auth/me")
+  @ApiTags("Auth")
+  @ApiOperation({ summary: "Get current user profile by access token" })
+  @ApiSuccess({
+    message: "Joriy foydalanuvchi profili muvaffaqiyatli olindi.",
+    auth: true,
+  })
+  getMyProfile(@Req() request: { user?: AccessTokenPayload }) {
+    const actorUserId = request.user?.sub;
+    if (!actorUserId) {
+      throw new BadRequestException("User aniqlanmadi.");
+    }
+    return this.appService.getMyProfile(actorUserId);
   }
 
   @Get("admin/users")
