@@ -19,7 +19,6 @@ import {
   AtSign,
   Eye,
   EyeOff,
-  Sparkles,
   Target,
   BookOpen,
   Brain,
@@ -326,10 +325,6 @@ export default function AuthPage() {
 
             {/* Hero text */}
             <div className="space-y-5 mt-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-4 py-1.5 text-[10px] font-black tracking-widest uppercase text-indigo-300">
-                <Sparkles className="w-3 h-3" />
-                {t("auth.hero_badge")}
-              </div>
               <h1 className="max-w-xl text-4xl leading-tight font-extrabold md:text-5xl tracking-tight whitespace-pre-line">
                 {t("auth.hero_title")}
               </h1>

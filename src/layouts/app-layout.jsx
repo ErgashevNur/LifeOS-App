@@ -2,38 +2,33 @@ import { cn } from "@/lib/utils";
 import { clearAuthSession, getAuthSession } from "@/lib/auth";
 import { useLifeOSData } from "@/lib/lifeos-store";
 import {
-  BookOpen, Bot, HeartPulse, LayoutDashboard, LineChart,
-  LogOut, Repeat, Settings, Shield, Target, Trophy,
-  Users, MessageSquare, Wallet, TrendingUp, Map,
-  Zap, ChevronRight, Menu, X,
+  Bot, LayoutDashboard,
+  LogOut, Repeat, Settings, Shield, Target,
+  Zap, ChevronRight, Menu, X, Calendar, Brain,
 } from "lucide-react";
 import { Navigate, Outlet, useLocation, useNavigate, NavLink } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 
 const NAV_ITEMS = [
-  { to: "/dashboard",  label: "Dashboard",    icon: LayoutDashboard, color: "#7C3AED" },
-  { to: "/goals",      label: "Maqsadlar",    icon: Target,          color: "#3B82F6" },
-  { to: "/habits",     label: "Odatlar",      icon: Repeat,          color: "#10B981" },
-  { to: "/books",      label: "Kitoblar",     icon: BookOpen,        color: "#F59E0B" },
-  { to: "/health",     label: "Sog'liq",      icon: HeartPulse,      color: "#F43F5E" },
-  { to: "/mastery",    label: "Mahorat",      icon: Trophy,          color: "#9333EA" },
-  { to: "/networking", label: "Networking",   icon: Users,           color: "#6366F1" },
-  { to: "/analytics",  label: "Tahlil",       icon: LineChart,       color: "#F97316" },
-  { to: "/assistant",  label: "AI Murabbiy",  icon: Bot,             color: "#0EA5E9" },
-  { to: "/finance",    label: "Moliya",       icon: Wallet,          color: "#14B8A6" },
-  { to: "/community",  label: "Jamiyat",      icon: MessageSquare,   color: "#EC4899" },
-  { to: "/settings",   label: "Sozlamalar",   icon: Settings,        color: "#94A3B8" },
+  { to: "/dashboard",  label: "Dashboard",    icon: LayoutDashboard, color: "#64748B" },
+  { to: "/planner",    label: "Kun rejasi",   icon: Calendar,        color: "#64748B" },
+  { to: "/goals",      label: "Maqsadlar",    icon: Target,          color: "#64748B" },
+  { to: "/habits",     label: "Odatlar",      icon: Repeat,          color: "#64748B" },
+  { to: "/focus",      label: "Deep Work",    icon: Zap,             color: "#64748B" },
+  { to: "/reflection", label: "Refleksiya",   icon: Brain,           color: "#64748B" },
+  { to: "/assistant",  label: "AI Murabbiy",  icon: Bot,             color: "#64748B" },
+  { to: "/settings",   label: "Sozlamalar",   icon: Settings,        color: "#64748B" },
 ];
 
 const ADMIN_ITEM = { to: "/users", label: "Foydalanuvchilar", icon: Shield, color: "#EF4444" };
 
 const BOTTOM_TABS = [
-  { to: "/dashboard", label: "Home",     icon: LayoutDashboard, color: "#7C3AED" },
-  { to: "/analytics", label: "Progress", icon: TrendingUp,      color: "#F97316" },
-  { to: "/goals",     label: "Plan",     icon: Map,             color: "#3B82F6" },
-  { to: "/assistant", label: "Coach",    icon: Bot,             color: "#0EA5E9" },
-  { to: "/settings",  label: "Settings", icon: Settings,        color: "#94A3B8" },
+  { to: "/dashboard", label: "Home",     icon: LayoutDashboard, color: "#334155" },
+  { to: "/planner",   label: "Reja",     icon: Calendar,        color: "#334155" },
+  { to: "/focus",     label: "Fokus",    icon: Zap,             color: "#334155" },
+  { to: "/assistant", label: "Coach",    icon: Bot,             color: "#334155" },
+  { to: "/settings",  label: "Sozlama",  icon: Settings,        color: "#64748B" },
 ];
 
 function isActive(current, target) {
@@ -62,7 +57,7 @@ function SidebarNav({ navItems, location, session, handleLogout, onNavClick }) {
       {/* Workspace / User */}
       <div className="px-3 py-2.5 border-b border-white/[0.07] flex-shrink-0">
         <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] hover:bg-white/[0.06] cursor-pointer transition-colors">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-md">
+          <div className="w-7 h-7 rounded-full bg-slate-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-md">
             {initials}
           </div>
           <div className="flex-1 min-w-0">
@@ -233,7 +228,7 @@ export default function AppLayout() {
           {/* Avatar */}
           <div
             onClick={() => navigate("/settings")}
-            className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity shadow-sm"
+            className="w-7 h-7 rounded-full bg-slate-600 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity shadow-sm"
           >
             {getInitials(session)}
           </div>
