@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "backend:install": "npm install --prefix backend",
-    "backend:dev": "npm run start:dev --prefix backend",
+    "backend:dev": "cd backend && npx ts-node-dev --respawn --transpile-only src/main.ts",
     "backend:build": "npm run build --prefix backend",
     "backend:start": "npm run start --prefix backend",
     "backend:prisma:generate": "npm run prisma:generate --prefix backend",
