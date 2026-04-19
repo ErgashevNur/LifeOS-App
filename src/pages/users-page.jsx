@@ -2,7 +2,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { apiRequest, getAuthSession } from "@/lib/auth";
+import { getAuthSession } from "@/lib/auth";
+import { useLifeOSData } from "@/lib/lifeos-store";
 import { cn } from "@/lib/utils";
 import { Users, Search, RefreshCw, AlertCircle, Calendar, MapPin, Building, Phone } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -36,28 +37,15 @@ function avatarFromName(name) {
 
 export default function UsersPage() {
   const session = getAuthSession();
-  const [users, setUsers] = useState([]);
+  const { data, actions, isLoading: storeLoading, error: storeError } = useLifeOSData();
+  const users = data.adminUsers;
   const [query, setQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   const fetchUsers = async () => {
     if (session?.role !== "admin") {
-      setUsers([]);
-      setIsLoading(false);
       return;
     }
-
-    setIsLoading(true);
-    try {
-      const payload = await apiRequest("/admin/users", {}, { auth: true });
-      setUsers(Array.isArray(payload) ? payload : []);
-      setError(null);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setIsLoading(false);
-    }
+    await actions.refreshAdminUsers();
   };
 
   useEffect(() => {
@@ -114,19 +102,19 @@ export default function UsersPage() {
           </div>
           <Button 
             onClick={() => void fetchUsers()} 
-            disabled={isLoading}
+            disabled={storeLoading}
             className="rounded-2xl h-12 px-6 font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-xl shadow-slate-900/10 transition-transform active:scale-95 disabled:opacity-50 disabled:active:scale-100 hidden sm:flex"
           >
-            <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+            <RefreshCw className={cn("h-4 w-4 mr-2", storeLoading && "animate-spin")} />
             Yangilash
           </Button>
           <Button 
             onClick={() => void fetchUsers()} 
-            disabled={isLoading}
+            disabled={storeLoading}
             size="icon"
             className="rounded-xl h-11 w-11 bg-slate-900 text-white sm:hidden"
           >
-            <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+            <RefreshCw className={cn("h-4 w-4", storeLoading && "animate-spin")} />
           </Button>
         </CardHeader>
         <CardContent className="px-8 pb-8 space-y-4">
@@ -150,10 +138,10 @@ export default function UsersPage() {
               Xavfsizlik yoqilgan
             </p>
           </div>
-          {error ? (
+          {storeError ? (
             <div className="rounded-2xl border-0 bg-red-50 p-4 text-sm font-medium text-red-700 flex items-center ring-1 ring-red-100">
               <AlertCircle className="w-4 h-4 mr-2 shrink-0" />
-              {error}
+              {storeError}
             </div>
           ) : null}
         </CardContent>

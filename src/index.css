@@ -31,25 +31,27 @@ body {
   color: #fff;
 }
 
+<<<<<<< HEAD
 /* Custom Scrollbar */
+=======
+/* Scrollbar */
+>>>>>>> a982465 (man life os loyihasini hamma modullarini ozgartirdm)
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
   background: #D1D5DB;
   border-radius: 10px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: #9CA3AF;
 }
 
+<<<<<<< HEAD
 /* Hide scrollbar for sidebar */
 .sidebar-scroll {
   scrollbar-width: none;
@@ -60,14 +62,23 @@ body {
 }
 
 /* No scrollbar utility */
+=======
+/* Hide scrollbar for sidebar & overflow navs */
+.sidebar-scroll,
+>>>>>>> a982465 (man life os loyihasini hamma modullarini ozgartirdm)
 .no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
+<<<<<<< HEAD
+=======
+.sidebar-scroll::-webkit-scrollbar,
+>>>>>>> a982465 (man life os loyihasini hamma modullarini ozgartirdm)
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 
+<<<<<<< HEAD
 /* Card styles */
 .notion-card {
   background: #ffffff;
@@ -85,6 +96,9 @@ body {
 }
 
 /* Glassmorphism */
+=======
+/* Glassmorphism helpers */
+>>>>>>> a982465 (man life os loyihasini hamma modullarini ozgartirdm)
 .glass-light {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(12px);
@@ -92,11 +106,16 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
+<<<<<<< HEAD
 /* Legacy premium shadow */
+=======
+/* Legacy shadow util */
+>>>>>>> a982465 (man life os loyihasini hamma modullarini ozgartirdm)
 .shadow-premium {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
+<<<<<<< HEAD
 /* Animated gradient for greeting */
 @keyframes gradient-shift {
   0% { background-position: 0% 50%; }
@@ -156,4 +175,13 @@ body {
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
+=======
+/* Page fade-in animation */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter {
+  animation: fadeInUp 0.2s ease-out;
+>>>>>>> a982465 (man life os loyihasini hamma modullarini ozgartirdm)
 }

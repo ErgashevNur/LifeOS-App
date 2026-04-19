@@ -1,10 +1,20 @@
+import { useLifeOSData } from "@/lib/lifeos-store";
 import { cn } from "@/lib/utils";
 import { clearAuthSession, getAuthSession } from "@/lib/auth";
-import { useLifeOSData } from "@/lib/lifeos-store";
 import {
-  Bot, LayoutDashboard,
-  LogOut, Repeat, Settings, Shield, Target,
-  Zap, ChevronRight, Menu, X, Calendar, Brain,
+  Bot,
+  Brain,
+  Calendar,
+  ChevronRight,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Repeat,
+  Settings,
+  Shield,
+  Target,
+  X,
+  Zap,
 } from "lucide-react";
 import { Navigate, Outlet, useLocation, useNavigate, NavLink } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -41,20 +51,20 @@ function getInitials(session) {
   return (f + l).toUpperCase() || "U";
 }
 
-function SidebarNav({ navItems, location, session, handleLogout, onNavClick }) {
+function SidebarContent({ navItems, location, session, handleLogout, onNavClick }) {
   const initials = getInitials(session);
 
   return (
     <>
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 h-[56px] border-b border-white/[0.07] flex-shrink-0">
-        <div className="w-7 h-7 rounded-[7px] bg-black flex items-center justify-center flex-shrink-0 shadow-md ring-1 ring-white/10">
-          <span className="text-white font-extrabold text-[16px] leading-none">L</span>
+      <div className="flex items-center gap-2.5 px-5 h-[52px] border-b border-white/[0.07] flex-shrink-0">
+        <div className="w-6 h-6 rounded-[7px] bg-violet-600 flex items-center justify-center flex-shrink-0">
+          <Zap className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
         </div>
         <span className="text-white font-bold text-[15px] tracking-tight">LifeOS</span>
       </div>
 
-      {/* Workspace / User */}
+      {/* User */}
       <div className="px-3 py-2.5 border-b border-white/[0.07] flex-shrink-0">
         <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] hover:bg-white/[0.06] cursor-pointer transition-colors">
           <div className="w-7 h-7 rounded-full bg-slate-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-md">
@@ -73,7 +83,7 @@ function SidebarNav({ navItems, location, session, handleLogout, onNavClick }) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-3 px-2.5 sidebar-scroll">
-        <p className="text-white/25 text-[10px] font-semibold uppercase tracking-[0.12em] px-2.5 mb-2">
+        <p className="text-white/25 text-[10px] font-semibold uppercase tracking-[0.1em] px-2.5 mb-2">
           Menu
         </p>
         {navItems.map(({ to, label, icon: Icon, color }) => {
@@ -101,7 +111,7 @@ function SidebarNav({ navItems, location, session, handleLogout, onNavClick }) {
         })}
       </nav>
 
-      {/* Logout */}
+      {/* Bottom */}
       <div className="p-2.5 border-t border-white/[0.07] flex-shrink-0">
         <button
           onClick={handleLogout}
@@ -120,7 +130,7 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const session = getAuthSession();
   const { backendHealth } = useLifeOSData();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (!session) return <Navigate to="/auth?tab=login" replace />;
 
@@ -138,7 +148,7 @@ export default function AppLayout() {
 
       {/* ── Desktop Sidebar ── */}
       <aside className="hidden lg:flex w-[220px] flex-shrink-0 bg-[#191919] flex-col h-full border-r border-white/[0.04]">
-        <SidebarNav
+        <SidebarContent
           navItems={navItems}
           location={location}
           session={session}
@@ -149,7 +159,7 @@ export default function AppLayout() {
 
       {/* ── Mobile Sidebar Overlay ── */}
       <AnimatePresence>
-        {mobileOpen && (
+        {mobileMenuOpen && (
           <>
             <motion.div
               key="overlay"
@@ -158,7 +168,7 @@ export default function AppLayout() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
               className="fixed inset-0 bg-black/40 z-40 lg:hidden"
-              onClick={() => setMobileOpen(false)}
+              onClick={() => setMobileMenuOpen(false)}
             />
             <motion.aside
               key="sidebar"
@@ -169,24 +179,24 @@ export default function AppLayout() {
               className="fixed left-0 top-0 h-full w-[220px] bg-[#191919] flex flex-col z-50 lg:hidden border-r border-white/[0.04]"
             >
               <button
-                onClick={() => setMobileOpen(false)}
+                onClick={() => setMobileMenuOpen(false)}
                 className="absolute top-3.5 right-3 text-white/40 hover:text-white/80 transition-colors z-10"
               >
                 <X className="w-4 h-4" />
               </button>
-              <SidebarNav
+              <SidebarContent
                 navItems={navItems}
                 location={location}
                 session={session}
                 handleLogout={handleLogout}
-                onNavClick={() => setMobileOpen(false)}
+                onNavClick={() => setMobileMenuOpen(false)}
               />
             </motion.aside>
           </>
         )}
       </AnimatePresence>
 
-      {/* ── Main area ── */}
+      {/* ── Main Area ── */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
         {/* Top header bar */}
@@ -194,7 +204,7 @@ export default function AppLayout() {
 
           {/* Mobile hamburger */}
           <button
-            onClick={() => setMobileOpen(true)}
+            onClick={() => setMobileMenuOpen(true)}
             className="lg:hidden text-gray-400 hover:text-gray-700 p-1 -ml-1 transition-colors"
           >
             <Menu className="w-5 h-5" />
@@ -205,7 +215,7 @@ export default function AppLayout() {
             <span className="text-gray-400 font-medium">LifeOS</span>
             <ChevronRight className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
             <span
-              className="font-semibold"
+              className="text-gray-700 font-semibold"
               style={{ color: currentItem?.color ?? "#374151" }}
             >
               {currentLabel}

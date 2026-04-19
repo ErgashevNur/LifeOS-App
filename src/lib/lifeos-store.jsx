@@ -3,7 +3,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import {
   AUTH_SESSION_CHANGED_EVENT,
   apiRequest,
-  getAuthSession,
+  isAuthenticated,
+  loginUser,
+  registerUser,
+  clearAuthSession,
+  loginWithGoogle,
 } from "@/lib/auth";
 
 const INITIAL_DATA = {
@@ -29,6 +33,7 @@ const INITIAL_DATA = {
     notifications: { habits: false, goals: false, assistant: false },
     integrations: { calendar: false, smartwatch: false, mobileSync: false },
   },
+  adminUsers: [],
 };
 
 const INITIAL_DASHBOARD_SUMMARY = {
@@ -51,9 +56,6 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function hasAccessToken() {
-  return Boolean(getAuthSession()?.accessToken);
-}
 
 function mergeStateWithInitial(nextData = {}) {
   const source = nextData ?? {};
@@ -180,6 +182,9 @@ function mergeStateWithInitial(nextData = {}) {
         ...(source.settings?.integrations ?? {}),
       },
     },
+    adminUsers: Array.isArray(source.adminUsers)
+      ? source.adminUsers
+      : INITIAL_DATA.adminUsers,
   };
 }
 
@@ -308,7 +313,7 @@ export function LifeOSDataProvider({ children }) {
       const currentRequestId = requestId + 1;
       requestId = currentRequestId;
 
-      if (!hasAccessToken()) {
+      if (!isAuthenticated()) {
         if (active && currentRequestId === requestId) {
           setData(INITIAL_DATA);
           setDashboardSummary(INITIAL_DASHBOARD_SUMMARY);
@@ -463,7 +468,7 @@ export function LifeOSDataProvider({ children }) {
 
   const actions = useMemo(() => {
     const mutate = async (path, options) => {
-      if (!hasAccessToken()) {
+      if (!isAuthenticated()) {
         setError("Kirish talab qilinadi.");
         return null;
       }
@@ -482,7 +487,7 @@ export function LifeOSDataProvider({ children }) {
     };
 
     const refreshSlice = async (path, applySlice) => {
-      if (!hasAccessToken()) {
+      if (!isAuthenticated()) {
         setError("Kirish talab qilinadi.");
         return null;
       }
@@ -519,6 +524,11 @@ export function LifeOSDataProvider({ children }) {
         })),
       refreshSettings: () =>
         refreshSlice("/settings", (prev, payload) => ({ ...prev, settings: payload })),
+      refreshAdminUsers: () =>
+        refreshSlice("/admin/users", (prev, payload) => ({
+          ...prev,
+          adminUsers: Array.isArray(payload) ? payload : [],
+        })),
       refreshDashboardSummary: () => refreshDashboardSummary(data),
 
       addDashboardTask(title) {
@@ -536,16 +546,16 @@ export function LifeOSDataProvider({ children }) {
       },
 
       addGoal(payload) {
-        if (!payload.title.trim()) {
+        if (!payload.title?.trim()) {
           return;
         }
         void mutate("/goals", {
           method: "POST",
           body: JSON.stringify({
             title: payload.title.trim(),
-            period: payload.period,
-            targetValue: Number(payload.targetValue),
-            deadline: payload.deadline,
+            period: payload.period || "Kunlik",
+            targetValue: Number(payload.targetValue || 1),
+            deadline: payload.deadline || new Date().toISOString().split("T")[0],
           }),
         });
       },
@@ -707,7 +717,7 @@ export function LifeOSDataProvider({ children }) {
       },
 
       async uploadImage(file) {
-        if (!hasAccessToken()) {
+        if (!isAuthenticated()) {
           setError("Kirish talab qilinadi.");
           return null;
         }
@@ -734,6 +744,41 @@ export function LifeOSDataProvider({ children }) {
         } catch (requestError) {
           setError(requestError.message);
           return null;
+        }
+      },
+      // Auth actions exposed via store
+      loginUser: async (email, password) => {
+        try {
+          const authData = await loginUser({ email, password });
+          await mutate("/state", {}); // Refresh state after login
+          return authData;
+        } catch (err) {
+          setError(err.message);
+          throw err;
+        }
+      },
+      registerUser: async (userData) => {
+        try {
+          const authData = await registerUser(userData);
+          await mutate("/state", {});
+          return authData;
+        } catch (err) {
+          setError(err.message);
+          throw err;
+        }
+      },
+      logoutUser: async () => {
+        clearAuthSession();
+        setData(INITIAL_DATA);
+      },
+      loginWithGoogle: async (credential) => {
+        try {
+          const authData = await loginWithGoogle(credential);
+          await mutate("/state", {});
+          return authData;
+        } catch (err) {
+          setError(err.message);
+          throw err;
         }
       },
     };
