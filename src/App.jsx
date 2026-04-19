@@ -10,20 +10,13 @@ const AuthPage = lazy(() => import("./pages/auth-page.jsx"));
 const WelcomePage = lazy(() => import("./pages/welcome-page.jsx"));
 const DashboardPage = lazy(() => import("./pages/dashboard.jsx"));
 const AssistantPage = lazy(() => import("./pages/assistant-page.jsx"));
-const AiAssistantPage = lazy(() => import("./pages/ai-assistant-page.jsx"));
-const BooksPage = lazy(() => import("./pages/books-page.jsx"));
 const GoalsPage = lazy(() => import("./pages/goals-page.jsx"));
 const HabitsPage = lazy(() => import("./pages/habits-page.jsx"));
-const HealthPage = lazy(() => import("./pages/health-page.jsx"));
-const HealthyLifePage = lazy(() => import("./pages/healthy-life-page.jsx"));
-const MasteryPage = lazy(() => import("./pages/mastery-page.jsx"));
-const NetworkPage = lazy(() => import("./pages/network-page.jsx"));
-const NetworkingPage = lazy(() => import("./pages/networking-page.jsx"));
-const AnalyticsPage = lazy(() => import("./pages/analytics-page.jsx"));
 const SettingsPage = lazy(() => import("./pages/settings-page.jsx"));
 const UsersPage = lazy(() => import("./pages/users-page.jsx"));
-const FinancialCenterPage = lazy(() => import("./pages/financial-center.jsx"));
-const CommunityPulsePage = lazy(() => import("./pages/community-pulse.jsx"));
+const DailyPlannerPage = lazy(() => import("./pages/daily-planner-page.jsx"));
+const FocusPage = lazy(() => import("./pages/focus-page.jsx"));
+const ReflectionPage = lazy(() => import("./pages/reflection-page.jsx"));
 const NotFoundPage = lazy(() => import("./pages/not-found-page.jsx"));
 const ErrorPage = lazy(() => import("./pages/error-page.jsx"));
 
@@ -86,14 +79,6 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "books",
-            element: (
-              <Suspense fallback={<PageLoader />}>
-                <BooksPage />
-              </Suspense>
-            ),
-          },
-          {
             path: "goals",
             element: (
               <Suspense fallback={<PageLoader />}>
@@ -110,66 +95,26 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "healthy-life",
+            path: "planner",
             element: (
               <Suspense fallback={<PageLoader />}>
-                <HealthyLifePage />
+                <DailyPlannerPage />
               </Suspense>
             ),
           },
           {
-            path: "health",
+            path: "focus",
             element: (
               <Suspense fallback={<PageLoader />}>
-                <HealthPage />
+                <FocusPage />
               </Suspense>
             ),
           },
           {
-            path: "mastery",
+            path: "reflection",
             element: (
               <Suspense fallback={<PageLoader />}>
-                <MasteryPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: "network",
-            element: (
-              <Suspense fallback={<PageLoader />}>
-                <NetworkPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: "networking",
-            element: (
-              <Suspense fallback={<PageLoader />}>
-                <NetworkingPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: "finance",
-            element: (
-              <Suspense fallback={<PageLoader />}>
-                <FinancialCenterPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: "community",
-            element: (
-              <Suspense fallback={<PageLoader />}>
-                <CommunityPulsePage />
-              </Suspense>
-            ),
-          },
-          {
-            path: "ai-assistant",
-            element: (
-              <Suspense fallback={<PageLoader />}>
-                <AiAssistantPage />
+                <ReflectionPage />
               </Suspense>
             ),
           },
@@ -178,14 +123,6 @@ const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoader />}>
                 <AssistantPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: "analytics",
-            element: (
-              <Suspense fallback={<PageLoader />}>
-                <AnalyticsPage />
               </Suspense>
             ),
           },
