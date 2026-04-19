@@ -1,725 +1,848 @@
-import { useState, useMemo, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useLifeOSData } from "@/lib/lifeos-store";
 import { cn } from "@/lib/utils";
 import {
-  Plus, Check, Clock, Sun, Zap, Target, X, Flame,
-  ChevronRight, ChevronDown, Edit3, Brain, Play,
-  ArrowRight, Sparkles, RotateCcw, Moon, Coffee,
-  Sunrise, Sunset, Bot, Lightbulb, Tag, Calendar,
-  GripVertical, Battery, Droplets,
+  Plus, Check, X, Clock, Flame, Target, Zap, Brain, Sun,
+  Moon, Coffee, ChevronDown, Edit3, Inbox, Calendar, TrendingUp,
+  Star, AlarmClock, Layers, ArrowRight, ChevronRight, Activity,
+  CheckCircle2, Circle, AlertCircle, Award, Repeat, List,
+  Timer, Sparkles, Lock, Sunset
 } from "lucide-react";
 
-/* ═══════════════════════════════════════════════════════════════════════════════
-   Constants
-   ═══════════════════════════════════════════════════════════════════════════════ */
-const TODAY = new Date();
-const DATE_LONG = TODAY.toLocaleDateString("uz-UZ", {
-  weekday: "long", year: "numeric", month: "long", day: "numeric",
-});
+/* ═══════════════════════════════════════════════════════════════════
+   CONSTANTS
+   ═══════════════════════════════════════════════════════════════════ */
 
-const ENERGY_TYPES = [
-  { key: "deep",    label: "Chuqur ish",    icon: Brain },
-  { key: "light",   label: "Yengil ish",    icon: Coffee },
-  { key: "creative", label: "Ijodiy ish",   icon: Lightbulb },
+const ENERGY_LEVELS = [
+  { value: 1, label: "Holdan"  },
+  { value: 2, label: "Past"    },
+  { value: 3, label: "O'rta"  },
+  { value: 4, label: "Yaxshi" },
+  { value: 5, label: "Cho'qq" },
 ];
 
-const TIME_BLOCKS = [
-  { key: "morning",   label: "Ertalab",   sub: "06:00 – 12:00", icon: Sunrise },
-  { key: "afternoon", label: "Tushdan keyin", sub: "12:00 – 18:00", icon: Sun },
-  { key: "evening",   label: "Kechqurun", sub: "18:00 – 22:00",  icon: Sunset },
+const BLOCK_TYPES = [
+  { value: "focus",   label: "Deep Work",  icon: Brain,    color: "bg-zinc-900 text-white" },
+  { value: "meeting", label: "Uchrashuv", icon: Calendar, color: "bg-zinc-700 text-white" },
+  { value: "task",    label: "Vazifa",    icon: Check,    color: "bg-zinc-200 text-zinc-900" },
+  { value: "break",   label: "Dam",       icon: Coffee,   color: "bg-zinc-100 text-zinc-600" },
+  { value: "habit",   label: "Odat",      icon: Repeat,   color: "bg-zinc-100 text-zinc-600" },
 ];
 
-const CAPTURE_TAGS = [
-  { key: "idea",      label: "G'oya",      color: "bg-zinc-200" },
-  { key: "distract",  label: "Chalg'ish",  color: "bg-zinc-300" },
-  { key: "tomorrow",  label: "Ertaga",     color: "bg-zinc-200" },
-  { key: "followup",  label: "Kuzatish",   color: "bg-zinc-300" },
+const GOAL_LINKS = [
+  "Ingliz tili B2",
+  "Startup launch",
+  "30kg vazn yo'qotish",
+  "Kitob yozish",
+  "Marathonga tayyorgarlik",
 ];
 
-const SLEEP_OPTIONS = ["Yomon", "O'rtacha", "Yaxshi", "Ajoyib"];
-const ENERGY_LEVELS = ["Past", "O'rta", "Yuqori", "Juda yuqori"];
-const MOOD_OPTIONS = ["😔", "😐", "🙂", "😊", "🔥"];
+const SEED_HABITS = [
+  { id: "h1", title: "Ertalab mashq",   icon: "🏃", completedToday: true,  streak: 12 },
+  { id: "h2", title: "30 daqiqa o'qish", icon: "📚", completedToday: false, streak: 5  },
+  { id: "h3", title: "Meditatsiya",     icon: "🧘", completedToday: false, streak: 0  },
+  { id: "h4", title: "Jurnal yozish",   icon: "📝", completedToday: false, streak: 3  },
+  { id: "h5", title: "Suv 2L",          icon: "💧", completedToday: true,  streak: 8  },
+];
 
-function fade(delay = 0) {
-  return {
-    initial: { opacity: 0, y: 10 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] },
-  };
+const CAPTURE_TAGS = ["g'oya", "vazifa", "savol", "yod olish", "keyinroq"];
+
+function getToday() {
+  const d = new Date();
+  const days   = ["Yakshanba","Dushanba","Seshanba","Chorshanba","Payshanba","Juma","Shanba"];
+  const months = ["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust","Sentabr","Oktabr","Noyabr","Dekabr"];
+  const start  = new Date(d.getFullYear(), 0, 1);
+  const weekNum = Math.ceil((((d - start) / 86400000) + start.getDay() + 1) / 7);
+  return { dayName: days[d.getDay()], day: d.getDate(), month: months[d.getMonth()], year: d.getFullYear(), weekNum, hour: d.getHours() };
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════════
-   Primitives
-   ═══════════════════════════════════════════════════════════════════════════════ */
-function Card({ children, className }) {
+const TODAY = getToday();
+
+function greeting(h) {
+  if (h < 6)  return "Tungi seans";
+  if (h < 12) return "Xayrli tong";
+  if (h < 17) return "Xayrli kun";
+  if (h < 21) return "Xayrli kech";
+  return "Tungi seans";
+}
+
+function getScoreMessage(score) {
+  if (score >= 90) return { msg: "Ajoyib kun! 🏆", sub: "Mukammal natija" };
+  if (score >= 75) return { msg: "Zo'r ish! 🔥",   sub: "Maqsad yo'lida davom et" };
+  if (score >= 55) return { msg: "Yaxshi boshlang'ich", sub: "Yana bir qadamga qodir" };
+  if (score >= 35) return { msg: "Davom eting!",    sub: "Har qadam muhim" };
+  return { msg: "Boshla!",                           sub: "Birinchi qadamni qo'y" };
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════════════════════════ */
+
+const fadeUp  = { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.35, ease: "easeOut" } };
+const slideIn = { initial: { opacity: 0, x: -10 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: 10 }, transition: { duration: 0.2 } };
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCORE RING
+   ═══════════════════════════════════════════════════════════════════ */
+
+function ScoreRing({ score, size = 96 }) {
+  const r    = (size - 12) / 2;
+  const circ = 2 * Math.PI * r;
+  const off  = circ - (score / 100) * circ;
   return (
-    <motion.div
-      {...fade()}
-      className={cn(
-        "bg-white rounded-2xl border border-zinc-200/70 shadow-[0_1px_3px_rgba(0,0,0,0.04)]",
-        className,
-      )}
-    >
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90" viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#e4e4e7" strokeWidth={7} />
+        <motion.circle
+          cx={size/2} cy={size/2} r={r} fill="none"
+          stroke={score >= 80 ? "#18181b" : score >= 50 ? "#52525b" : "#a1a1aa"}
+          strokeWidth={7} strokeLinecap="round"
+          strokeDasharray={circ}
+          initial={{ strokeDashoffset: circ }}
+          animate={{ strokeDashoffset: off }}
+          transition={{ duration: 1, ease: "easeOut" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-2xl font-black text-zinc-900 leading-none">{score}</span>
+        <span className="text-[9px] font-bold text-zinc-400 tracking-widest uppercase mt-0.5">Ball</span>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SECTION
+   ═══════════════════════════════════════════════════════════════════ */
+
+function Section({ children, className = "", noPad = false }) {
+  return (
+    <motion.div {...fadeUp} className={cn("bg-white border border-zinc-200 rounded-2xl", noPad ? "" : "p-5", className)}>
       {children}
     </motion.div>
   );
 }
 
-function SectionHead({ icon: Icon, title, subtitle, right }) {
+function SectionHead({ icon: Icon, title, badge, action }) {
   return (
-    <div className="flex items-center justify-between px-5 pt-5 pb-3">
-      <div className="flex items-center gap-2.5">
-        {Icon && (
-          <div className="w-8 h-8 rounded-xl bg-zinc-100 flex items-center justify-center flex-shrink-0">
-            <Icon className="w-4 h-4 text-zinc-500" strokeWidth={1.8} />
-          </div>
-        )}
-        <div>
-          <p className="text-[13px] font-semibold text-zinc-800 leading-tight">{title}</p>
-          {subtitle && <p className="text-[11px] text-zinc-400 mt-0.5">{subtitle}</p>}
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-2">
+        <div className="w-7 h-7 rounded-lg bg-zinc-100 flex items-center justify-center">
+          <Icon className="w-3.5 h-3.5 text-zinc-600" strokeWidth={2.2} />
         </div>
+        <span className="text-sm font-semibold text-zinc-900">{title}</span>
+        {badge !== undefined && (
+          <span className="text-xs font-bold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">{badge}</span>
+        )}
       </div>
-      {right}
-    </div>
-  );
-}
-
-function Pill({ children, active, onClick, className }) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all",
-        active
-          ? "bg-zinc-900 text-white border-zinc-900"
-          : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300",
-        className,
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Checkbox({ checked, onClick, size = "md" }) {
-  const s = size === "sm" ? 16 : 18;
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "rounded-[5px] border-[1.5px] flex items-center justify-center flex-shrink-0 transition-all",
-        checked ? "bg-zinc-900 border-zinc-900" : "border-zinc-300 hover:border-zinc-400",
-      )}
-      style={{ width: s, height: s }}
-    >
-      {checked && (
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 25 }}>
-          <Check className="text-white" style={{ width: s - 6, height: s - 6 }} strokeWidth={3} />
-        </motion.div>
-      )}
-    </button>
-  );
-}
-
-function ProgressBar({ value }) {
-  return (
-    <div className="h-[5px] bg-zinc-100 rounded-full overflow-hidden">
-      <motion.div
-        initial={{ width: 0 }}
-        animate={{ width: `${Math.min(100, value)}%` }}
-        transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-        className="h-full rounded-full bg-zinc-900"
-      />
-    </div>
-  );
-}
-
-function CircularScore({ score, size = 100, sw = 6 }) {
-  const r = (size - sw) / 2;
-  const circ = 2 * Math.PI * r;
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#f4f4f5" strokeWidth={sw} />
-        <motion.circle
-          cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#18181b" strokeWidth={sw} strokeLinecap="round"
-          strokeDasharray={circ}
-          initial={{ strokeDashoffset: circ }}
-          animate={{ strokeDashoffset: circ - (score / 100) * circ }}
-          transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-xl font-bold text-zinc-900 tabular-nums">{score}</span>
-        <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">ball</span>
-      </div>
-    </div>
-  );
-}
-
-function EmptyState({ icon: Icon, text, action }) {
-  return (
-    <div className="flex flex-col items-center py-8 text-zinc-300">
-      <Icon className="w-8 h-8 mb-2 opacity-30" strokeWidth={1} />
-      <p className="text-[13px] font-medium text-zinc-400">{text}</p>
       {action}
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════════
-   Main Component
-   ═══════════════════════════════════════════════════════════════════════════════ */
-export default function DailyPlannerPage() {
-  const { data, actions } = useLifeOSData();
+/* ═══════════════════════════════════════════════════════════════════
+   CHECKBOX
+   ═══════════════════════════════════════════════════════════════════ */
 
-  /* ── state ── */
-  const [mission, setMission] = useState("");
-  const [missionLocked, setMissionLocked] = useState(false);
-
-  // priorities
-  const [priorities, setPriorities] = useState([]);
-  const [prioInput, setPrioInput] = useState("");
-  const [prioEnergy, setPrioEnergy] = useState("deep");
-  const [prioTime, setPrioTime] = useState("morning");
-
-  // supporting
-  const [support, setSupport] = useState([]);
-  const [supportInput, setSupportInput] = useState("");
-
-  // focus
-  const [focusSessions, setFocusSessions] = useState([]);
-  const [focusInput, setFocusInput] = useState("");
-  const [focusDur, setFocusDur] = useState(25);
-
-  // energy
-  const [sleep, setSleep] = useState(null);
-  const [energyLvl, setEnergyLvl] = useState(null);
-  const [moodVal, setMoodVal] = useState(null);
-  const [hydration, setHydration] = useState(0);
-
-  // capture
-  const [captures, setCaptures] = useState([]);
-  const [captureInput, setCaptureInput] = useState("");
-  const [captureTag, setCaptureTag] = useState("idea");
-
-  // reflection
-  const [refWin, setRefWin] = useState("");
-  const [refDistract, setRefDistract] = useState("");
-  const [refTomorrow, setRefTomorrow] = useState("");
-
-  // habits from store
-  const habits = data.habits || [];
-  const habitsDone = habits.filter((h) => h.completedToday).length;
-
-  /* ── computed ── */
-  const prioDone = priorities.filter((p) => p.done).length;
-  const focDone  = focusSessions.filter((f) => f.done).length;
-  const hasRef   = refWin.trim() || refDistract.trim() || refTomorrow.trim();
-
-  const dayScore = useMemo(() => {
-    let s = 0;
-    const pMax = Math.max(priorities.length, 1);
-    s += Math.round((prioDone / pMax) * 40);
-    const hMax = Math.max(habits.length, 1);
-    s += Math.round((habitsDone / hMax) * 30);
-    const fMax = Math.max(focusSessions.length, 1);
-    s += Math.round((focDone / fMax) * 20);
-    if (hasRef) s += 10;
-    return Math.min(100, s);
-  }, [priorities, prioDone, habits.length, habitsDone, focusSessions, focDone, hasRef]);
-
-  const dayLabel = dayScore >= 80 ? "Ajoyib kun!" : dayScore >= 50 ? "Yaxshi yo'ldasiz" : dayScore > 0 ? "Davom eting" : "Yangi kun — yangi imkoniyat";
-
-  const totalPlannedMin = focusSessions.reduce((s, f) => s + f.dur, 0);
-
-  /* ── actions ── */
-  const addPriority = useCallback(() => {
-    if (!prioInput.trim() || priorities.length >= 3) return;
-    setPriorities((p) => [...p, { id: Date.now(), text: prioInput.trim(), done: false, energy: prioEnergy, time: prioTime, deferred: false }]);
-    setPrioInput("");
-  }, [prioInput, priorities.length, prioEnergy, prioTime]);
-
-  const togglePrio = useCallback((id) => setPriorities((p) => p.map((x) => x.id === id ? { ...x, done: !x.done } : x)), []);
-  const deferPrio = useCallback((id) => setPriorities((p) => p.map((x) => x.id === id ? { ...x, deferred: true } : x)), []);
-  const removePrio = useCallback((id) => setPriorities((p) => p.filter((x) => x.id !== id)), []);
-  const promoteSup = useCallback((id) => {
-    if (priorities.length >= 3) return;
-    const item = support.find((s) => s.id === id);
-    if (!item) return;
-    setPriorities((p) => [...p, { id: Date.now(), text: item.text, done: false, energy: "deep", time: "morning", deferred: false }]);
-    setSupport((s) => s.filter((x) => x.id !== id));
-  }, [support, priorities.length]);
-
-  const addSupport = useCallback(() => {
-    if (!supportInput.trim()) return;
-    setSupport((s) => [...s, { id: Date.now(), text: supportInput.trim(), done: false }]);
-    setSupportInput("");
-  }, [supportInput]);
-  const toggleSup = useCallback((id) => setSupport((s) => s.map((x) => x.id === id ? { ...x, done: !x.done } : x)), []);
-  const removeSup = useCallback((id) => setSupport((s) => s.filter((x) => x.id !== id)), []);
-
-  const addFocus = useCallback(() => {
-    if (!focusInput.trim()) return;
-    setFocusSessions((s) => [...s, { id: Date.now(), text: focusInput.trim(), dur: focusDur, done: false }]);
-    setFocusInput("");
-  }, [focusInput, focusDur]);
-  const toggleFocus = useCallback((id) => setFocusSessions((s) => s.map((x) => x.id === id ? { ...x, done: !x.done } : x)), []);
-  const removeFocus = useCallback((id) => setFocusSessions((s) => s.filter((x) => x.id !== id)), []);
-
-  const addCapture = useCallback(() => {
-    if (!captureInput.trim()) return;
-    setCaptures((c) => [{ id: Date.now(), text: captureInput.trim(), tag: captureTag }, ...c]);
-    setCaptureInput("");
-  }, [captureInput, captureTag]);
-  const removeCapture = useCallback((id) => setCaptures((c) => c.filter((x) => x.id !== id)), []);
-
-  /* ═══════════════════════════════════════════════════════════════════════════ */
+function CB({ checked, onChange, size = "md" }) {
+  const cls = size === "lg" ? "w-6 h-6 rounded-md" : size === "sm" ? "w-4 h-4 rounded" : "w-5 h-5 rounded-md";
+  const ico = size === "lg" ? "w-3.5 h-3.5" : size === "sm" ? "w-2.5 h-2.5" : "w-3 h-3";
   return (
-    <div className="p-4 lg:p-6 pb-28 lg:pb-10 max-w-[1260px] mx-auto space-y-5">
+    <button
+      onClick={onChange}
+      className={cn("border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200", cls,
+        checked ? "bg-zinc-900 border-zinc-900" : "border-zinc-300 hover:border-zinc-500"
+      )}
+    >
+      {checked && <Check className={cn(ico, "text-white")} strokeWidth={3} />}
+    </button>
+  );
+}
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-         HEADER
-         ═══════════════════════════════════════════════════════════════════════ */}
-      <motion.div {...fade()} className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">{DATE_LONG}</p>
-          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-zinc-900 mt-1">Kunlik reja</h1>
-          <p className="text-sm text-zinc-400 mt-0.5">Tizimingizni ishga tushiring. Bugun nima muhim?</p>
-        </div>
-        <div className="flex gap-2">
-          <Link to="/focus" className="h-9 px-4 rounded-xl bg-zinc-900 text-white text-[12px] font-semibold flex items-center gap-2 hover:bg-zinc-800 transition-colors">
-            <Play className="w-3 h-3" fill="currentColor" /> Deep Work
-          </Link>
-          <Link to="/assistant" className="h-9 px-4 rounded-xl bg-zinc-100 text-zinc-600 text-[12px] font-semibold flex items-center gap-2 hover:bg-zinc-200 transition-colors border border-zinc-200">
-            <Bot className="w-3 h-3" /> AI rejalashtirsin
-          </Link>
-        </div>
-      </motion.div>
+/* ═══════════════════════════════════════════════════════════════════
+   MIT TASK ITEM
+   ═══════════════════════════════════════════════════════════════════ */
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-         SCORE + PROGRESS
-         ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        <Card className="col-span-2 lg:col-span-2 flex items-center gap-5 p-5">
-          <CircularScore score={dayScore} />
-          <div>
-            <p className="text-[15px] font-bold text-zinc-800">{dayLabel}</p>
-            <div className="mt-2 space-y-1">
-              {[
-                { label: "Vazifalar", val: `${prioDone}/${priorities.length}`, pct: priorities.length ? (prioDone / priorities.length) * 100 : 0 },
-                { label: "Odatlar",   val: `${habitsDone}/${habits.length}`,  pct: habits.length ? (habitsDone / habits.length) * 100 : 0 },
-                { label: "Fokus",     val: `${focDone}/${focusSessions.length}`, pct: focusSessions.length ? (focDone / focusSessions.length) * 100 : 0 },
-              ].map((b) => (
-                <div key={b.label} className="flex items-center gap-2">
-                  <span className="text-[10px] text-zinc-400 w-14">{b.label}</span>
-                  <div className="flex-1 h-1 bg-zinc-100 rounded-full overflow-hidden">
-                    <motion.div className="h-full bg-zinc-900 rounded-full" initial={{ width: 0 }} animate={{ width: `${b.pct}%` }} transition={{ duration: 0.8 }} />
-                  </div>
-                  <span className="text-[10px] font-bold text-zinc-500 tabular-nums w-8 text-right">{b.val}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
+function MITItem({ task, index, onToggle, onRemove }) {
+  const numColors = ["text-zinc-900", "text-zinc-500", "text-zinc-400"];
+  return (
+    <motion.div layout {...slideIn} className="flex items-center gap-3 group py-1">
+      <span className={cn("text-lg font-black w-5 text-center leading-none", numColors[index] ?? "text-zinc-400")}>
+        {index + 1}
+      </span>
+      <CB checked={task.done} onChange={() => onToggle(task.id)} size="lg" />
+      <div className="flex-1 min-w-0">
+        <p className={cn("text-sm font-medium leading-tight transition-all", task.done ? "line-through text-zinc-400" : "text-zinc-900")}>
+          {task.text}
+        </p>
+        {task.goal && (
+          <p className="text-[11px] text-zinc-400 mt-0.5 flex items-center gap-1">
+            <Target className="w-2.5 h-2.5" />{task.goal}
+          </p>
+        )}
+      </div>
+      {task.estimate && (
+        <span className="text-[11px] text-zinc-400 flex items-center gap-0.5 flex-shrink-0">
+          <Clock className="w-3 h-3" />{task.estimate}m
+        </span>
+      )}
+      <button onClick={() => onRemove(task.id)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded">
+        <X className="w-3.5 h-3.5 text-zinc-400 hover:text-zinc-700" />
+      </button>
+    </motion.div>
+  );
+}
 
-        {[
-          { label: "Rejalashtirilgan", value: `${totalPlannedMin}m`, icon: Clock },
-          { label: "Odatlar",  value: `${habitsDone}/${habits.length}`, icon: Flame },
-          { label: "Streak",   value: `${data.habits?.[0]?.streak ?? 0}`, icon: Zap },
-          { label: "Fokus",    value: `${focusSessions.filter(f => f.done).length}`, icon: Brain },
-        ].map((s) => (
-          <Card key={s.label} className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-7 h-7 rounded-lg bg-zinc-100 flex items-center justify-center">
-                <s.icon className="w-3.5 h-3.5 text-zinc-500" strokeWidth={1.8} />
+function MITAddForm({ onAdd }) {
+  const [text, setText]         = useState("");
+  const [goal, setGoal]         = useState("");
+  const [estimate, setEstimate] = useState("");
+  const [showExtra, setShowExtra] = useState(false);
+
+  const handleAdd = () => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    onAdd({ text: trimmed, goal: goal || null, estimate: estimate ? Number(estimate) : null });
+    setText(""); setGoal(""); setEstimate(""); setShowExtra(false);
+  };
+
+  return (
+    <div className="mt-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <input
+          value={text}
+          onChange={e => setText(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && handleAdd()}
+          placeholder="Bugungi eng muhim vazifa..."
+          className="flex-1 text-sm bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2.5 outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-300"
+        />
+        <button
+          onClick={() => setShowExtra(v => !v)}
+          className="w-9 h-9 rounded-xl border border-zinc-200 bg-white flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:border-zinc-400 transition-colors"
+        >
+          <ChevronDown className={cn("w-4 h-4 transition-transform", showExtra && "rotate-180")} />
+        </button>
+        <button
+          onClick={handleAdd}
+          disabled={!text.trim()}
+          className="w-9 h-9 rounded-xl bg-zinc-900 text-white flex items-center justify-center hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+      <AnimatePresence>
+        {showExtra && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="flex gap-2 pt-1">
+              <select
+                value={goal}
+                onChange={e => setGoal(e.target.value)}
+                className="flex-1 text-xs bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1.5 outline-none focus:border-zinc-400 text-zinc-600"
+              >
+                <option value="">Maqsadga bog'lash...</option>
+                {GOAL_LINKS.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  value={estimate}
+                  onChange={e => setEstimate(e.target.value)}
+                  placeholder="min"
+                  min="5" max="240"
+                  className="w-16 text-xs bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1.5 outline-none focus:border-zinc-400 text-center"
+                />
+                <span className="text-[11px] text-zinc-400">min</span>
               </div>
             </div>
-            <p className="text-lg font-bold text-zinc-900 tabular-nums">{s.value}</p>
-            <p className="text-[10px] text-zinc-400 font-medium">{s.label}</p>
-          </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TIME BLOCK
+   ═══════════════════════════════════════════════════════════════════ */
+
+function TimeBlock({ block, onToggle, onRemove }) {
+  const type = BLOCK_TYPES.find(t => t.value === block.type) ?? BLOCK_TYPES[0];
+  const Icon = type.icon;
+  return (
+    <motion.div layout {...slideIn}
+      className={cn(
+        "flex items-center gap-3 rounded-xl px-3 py-2.5 group border transition-all",
+        block.done ? "border-zinc-100 bg-zinc-50 opacity-60" : "border-zinc-200 bg-white"
+      )}
+    >
+      <CB checked={block.done} onChange={() => onToggle(block.id)} size="sm" />
+      <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0", type.color)}>
+        <Icon className="w-3 h-3" strokeWidth={2.5} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={cn("text-sm font-medium", block.done && "line-through text-zinc-400")}>{block.title}</p>
+        <p className="text-[11px] text-zinc-400">{type.label}</p>
+      </div>
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        {block.start && <span className="text-[11px] text-zinc-400">{block.start}</span>}
+        <Clock className="w-3 h-3 text-zinc-400" />
+        <span className="text-[11px] font-medium text-zinc-500">{block.duration}m</span>
+      </div>
+      <button onClick={() => onRemove(block.id)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1">
+        <X className="w-3 h-3 text-zinc-400 hover:text-zinc-700" />
+      </button>
+    </motion.div>
+  );
+}
+
+function BlockAddForm({ onAdd }) {
+  const [title,    setTitle]    = useState("");
+  const [type,     setType]     = useState("focus");
+  const [duration, setDuration] = useState(50);
+  const [start,    setStart]    = useState("");
+
+  const handleAdd = () => {
+    if (!title.trim()) return;
+    onAdd({ title: title.trim(), type, duration, start: start || null });
+    setTitle(""); setStart("");
+  };
+
+  return (
+    <div className="mt-3 space-y-2.5 pt-3 border-t border-zinc-100">
+      <input
+        value={title}
+        onChange={e => setTitle(e.target.value)}
+        onKeyDown={e => e.key === "Enter" && handleAdd()}
+        placeholder="Blok nomi..."
+        className="w-full text-sm bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 outline-none focus:border-zinc-400 placeholder:text-zinc-300"
+      />
+      <div className="flex gap-1 flex-wrap">
+        {BLOCK_TYPES.map(bt => (
+          <button
+            key={bt.value}
+            onClick={() => setType(bt.value)}
+            className={cn(
+              "text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-colors",
+              type === bt.value ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-200 text-zinc-500 hover:border-zinc-400"
+            )}
+          >
+            {bt.label}
+          </button>
         ))}
       </div>
+      <div className="flex items-center gap-2">
+        {[25, 50, 90].map(d => (
+          <button
+            key={d}
+            onClick={() => setDuration(d)}
+            className={cn(
+              "text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-colors",
+              duration === d ? "bg-zinc-800 text-white border-zinc-800" : "border-zinc-200 text-zinc-500 hover:border-zinc-300"
+            )}
+          >
+            {d}m
+          </button>
+        ))}
+        <input
+          type="time"
+          value={start}
+          onChange={e => setStart(e.target.value)}
+          className="flex-1 text-xs bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1.5 outline-none focus:border-zinc-400 text-zinc-600"
+        />
+        <button
+          onClick={handleAdd}
+          disabled={!title.trim()}
+          className="w-8 h-8 rounded-xl bg-zinc-900 text-white flex items-center justify-center hover:bg-zinc-700 disabled:opacity-30 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-         DAILY MISSION
-         ═══════════════════════════════════════════════════════════════════════ */}
-      <Card>
-        <SectionHead icon={Sparkles} title="Bugungi missiya" subtitle="Bir jumlada bugungi niyatingiz" />
-        <div className="px-5 pb-5">
-          {missionLocked ? (
-            <div className="flex items-center justify-between bg-zinc-50 rounded-xl px-4 py-3">
-              <p className="text-[13px] text-zinc-700 italic leading-relaxed">"{mission}"</p>
-              <button onClick={() => setMissionLocked(false)} className="text-zinc-400 hover:text-zinc-600 ml-3 flex-shrink-0">
-                <Edit3 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <input
-                value={mission}
-                onChange={(e) => setMission(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && mission.trim() && setMissionLocked(true)}
-                placeholder="Bugun men fokusimni himoya qilaman va dashboard tuzilmasini tugataman."
-                className="flex-1 h-10 rounded-xl bg-zinc-50 border border-zinc-200 text-[13px] px-4 outline-none focus:border-zinc-400 transition-all placeholder:text-zinc-400"
-              />
-              <button
-                onClick={() => mission.trim() && setMissionLocked(true)}
-                disabled={!mission.trim()}
-                className="h-10 px-4 rounded-xl bg-zinc-900 text-white text-[12px] font-semibold hover:bg-zinc-800 transition-colors disabled:opacity-30"
-              >
-                Saqlash
-              </button>
-            </div>
-          )}
-        </div>
-      </Card>
+/* ═══════════════════════════════════════════════════════════════════
+   ENERGY CHECK-IN
+   ═══════════════════════════════════════════════════════════════════ */
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-         MAIN 2-COL
-         ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="grid lg:grid-cols-12 gap-5">
+function EnergyCheckIn({ label, icon: Icon, value, onChange }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5 w-32">
+        <Icon className="w-3.5 h-3.5 text-zinc-400" />
+        <span className="text-xs text-zinc-500">{label}</span>
+      </div>
+      <div className="flex gap-1.5">
+        {ENERGY_LEVELS.map(lvl => (
+          <button
+            key={lvl.value}
+            onClick={() => onChange(value === lvl.value ? null : lvl.value)}
+            className={cn(
+              "w-7 h-7 rounded-lg border-2 text-[10px] font-bold transition-all",
+              value === lvl.value
+                ? "border-zinc-900 bg-zinc-900 text-white scale-105"
+                : "border-zinc-200 text-zinc-400 hover:border-zinc-400"
+            )}
+          >
+            {lvl.value}
+          </button>
+        ))}
+      </div>
+      {value !== null && value !== undefined && (
+        <span className="text-xs text-zinc-500">{ENERGY_LEVELS.find(l => l.value === value)?.label}</span>
+      )}
+    </div>
+  );
+}
 
-        {/* ─── LEFT 8 cols ─── */}
-        <div className="lg:col-span-8 space-y-5">
+/* ═══════════════════════════════════════════════════════════════════
+   SCORE BREAKDOWN
+   ═══════════════════════════════════════════════════════════════════ */
 
-          {/* ── TOP 3 PRIORITIES ── */}
-          <Card>
-            <SectionHead
-              icon={Zap}
-              title="Eng muhim 3 vazifa"
-              subtitle={`${prioDone}/${priorities.length} bajarildi · Faqat eng muhimi`}
+function ScoreBreakdown({ items }) {
+  return (
+    <div className="space-y-2 mt-4">
+      {items.map(item => (
+        <div key={item.label} className="flex items-center gap-3">
+          <span className="text-[11px] text-zinc-400 w-28 flex-shrink-0">{item.label}</span>
+          <div className="flex-1 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-zinc-900 rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${item.pct}%` }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
             />
-            <div className="px-5 pb-2"><ProgressBar value={priorities.length ? (prioDone / priorities.length) * 100 : 0} /></div>
+          </div>
+          <span className="text-[11px] font-semibold text-zinc-600 w-10 text-right flex-shrink-0">
+            {item.score}/{item.max}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-            <div className="px-4 pt-2 pb-1 space-y-1">
-              <AnimatePresence mode="popLayout">
-                {priorities.map((p, i) => (
-                  <motion.div
-                    key={p.id}
-                    layout
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -16, transition: { duration: 0.15 } }}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-3 rounded-xl group transition-colors",
-                      p.deferred ? "opacity-40" : "hover:bg-zinc-50",
-                    )}
-                  >
-                    <span className="text-[11px] font-bold text-zinc-300 w-4 text-center tabular-nums">{i + 1}</span>
-                    <Checkbox checked={p.done} onClick={() => togglePrio(p.id)} />
-                    <div className="flex-1 min-w-0">
-                      <span className={cn(
-                        "text-[13px] font-medium block transition-colors",
-                        p.done ? "line-through text-zinc-400" : "text-zinc-700",
-                        p.deferred && "line-through",
-                      )}>
-                        {p.text}
-                      </span>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">
-                          {ENERGY_TYPES.find(e => e.key === p.energy)?.label}
-                        </span>
-                        <span className="text-zinc-200">·</span>
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">
-                          {TIME_BLOCKS.find(t => t.key === p.time)?.label}
-                        </span>
-                      </div>
-                    </div>
+/* ═══════════════════════════════════════════════════════════════════
+   CAPTURE INBOX ITEM
+   ═══════════════════════════════════════════════════════════════════ */
 
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {!p.done && !p.deferred && (
-                        <>
-                          <Link to="/focus" className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-zinc-100 transition-colors" title="Fokus sessiya">
-                            <Play className="w-3 h-3 text-zinc-400" fill="currentColor" />
-                          </Link>
-                          <button onClick={() => deferPrio(p.id)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-zinc-100 transition-colors" title="Ertaga qoldir">
-                            <ArrowRight className="w-3 h-3 text-zinc-400" />
-                          </button>
-                        </>
-                      )}
-                      <button onClick={() => removePrio(p.id)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-zinc-100 transition-colors">
-                        <X className="w-3 h-3 text-zinc-400" />
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+function CaptureItem({ item, onRemove }) {
+  return (
+    <motion.div layout {...slideIn} className="flex items-start gap-2.5 group py-1.5">
+      <div className="w-1.5 h-1.5 rounded-full bg-zinc-400 mt-1.5 flex-shrink-0" />
+      <p className="flex-1 text-sm text-zinc-700 leading-snug">{item.text}</p>
+      {item.tag && (
+        <span className="text-[10px] font-medium bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-full flex-shrink-0">
+          {item.tag}
+        </span>
+      )}
+      <button onClick={() => onRemove(item.id)} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 mt-0.5">
+        <X className="w-3 h-3 text-zinc-400 hover:text-zinc-700" />
+      </button>
+    </motion.div>
+  );
+}
 
-              {priorities.length === 0 && (
-                <EmptyState icon={Target} text="Bugun eng muhim 3 ishingizni belgilang" />
+/* ═══════════════════════════════════════════════════════════════════
+   MAIN PAGE
+   ═══════════════════════════════════════════════════════════════════ */
+
+export default function DailyPlannerPage() {
+  /* MITs */
+  const [mitTasks, setMITTasks] = useState([]);
+  const addMIT    = useCallback((task) => {
+    if (mitTasks.length >= 3) return;
+    setMITTasks(prev => [...prev, { id: Date.now(), done: false, ...task }]);
+  }, [mitTasks.length]);
+  const toggleMIT = useCallback(id => setMITTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t)), []);
+  const removeMIT = useCallback(id => setMITTasks(prev => prev.filter(t => t.id !== id)), []);
+
+  /* Supporting tasks */
+  const [tasks,     setTasks]     = useState([
+    { id: 1, text: "Email inbox tozalash",         done: false },
+    { id: 2, text: "Haftalik hisobot tayyorlash",  done: true  },
+  ]);
+  const [taskInput, setTaskInput] = useState("");
+  const addTask    = useCallback(() => {
+    const t = taskInput.trim(); if (!t) return;
+    setTasks(prev => [...prev, { id: Date.now(), text: t, done: false }]);
+    setTaskInput("");
+  }, [taskInput]);
+  const toggleTask = useCallback(id => setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t)), []);
+  const removeTask = useCallback(id => setTasks(prev => prev.filter(t => t.id !== id)), []);
+
+  /* Time blocks */
+  const [blocks, setBlocks] = useState([
+    { id: 1, title: "Ingliz tili darsi",  type: "focus",   duration: 50, start: "09:00", done: false },
+    { id: 2, title: "Jamoa uchrashuvi",  type: "meeting", duration: 60, start: "10:30", done: false },
+    { id: 3, title: "Deep work — loyiha", type: "focus",   duration: 90, start: "14:00", done: false },
+  ]);
+  const addBlock    = useCallback((block) => setBlocks(prev => [...prev, { id: Date.now(), done: false, ...block }]), []);
+  const toggleBlock = useCallback(id => setBlocks(prev => prev.map(b => b.id === id ? { ...b, done: !b.done } : b)), []);
+  const removeBlock = useCallback(id => setBlocks(prev => prev.filter(b => b.id !== id)), []);
+
+  /* Habits */
+  const [habits, setHabits] = useState(SEED_HABITS);
+  const toggleHabit = useCallback(id => setHabits(prev => prev.map(h => h.id === id ? { ...h, completedToday: !h.completedToday } : h)), []);
+
+  /* Energy */
+  const [energyMorning,   setEnergyMorning]   = useState(null);
+  const [energyAfternoon, setEnergyAfternoon] = useState(null);
+  const [energyEvening,   setEnergyEvening]   = useState(null);
+
+  /* Capture inbox */
+  const [captures,    setCaptures]    = useState([
+    { id: 1, text: "Yangi kitob g'oyasi — The Art of Possibility", tag: "g'oya"  },
+    { id: 2, text: "Haftasiga 3 marta yugurish jadvalini tuzish",  tag: "vazifa" },
+  ]);
+  const [captureInput, setCaptureInput] = useState("");
+  const [captureTag,   setCaptureTag]   = useState("g'oya");
+  const addCapture    = useCallback(() => {
+    const t = captureInput.trim(); if (!t) return;
+    setCaptures(prev => [...prev, { id: Date.now(), text: t, tag: captureTag }]);
+    setCaptureInput("");
+  }, [captureInput, captureTag]);
+  const removeCapture = useCallback(id => setCaptures(prev => prev.filter(c => c.id !== id)), []);
+
+  /* Intention + reflection */
+  const [intention,    setIntention]    = useState("");
+  const [reflWin,      setReflWin]      = useState("");
+  const [reflBlock,    setReflBlock]    = useState("");
+  const [reflTomorrow, setReflTomorrow] = useState("");
+
+  /* Daily Score */
+  const { score, breakdown } = useMemo(() => {
+    const mitDone  = mitTasks.filter(t => t.done).length;
+    const mitTotal = Math.max(mitTasks.length, 1);
+    const mitScore = Math.round((mitDone / mitTotal) * 35);
+
+    const habDone  = habits.filter(h => h.completedToday).length;
+    const habTotal = habits.length;
+    const habScore = Math.round((habDone / habTotal) * 25);
+
+    const blkDone  = blocks.filter(b => b.done).length;
+    const blkTotal = Math.max(blocks.length, 1);
+    const blkScore = Math.round((blkDone / blkTotal) * 25);
+
+    const reflFilled = [reflWin, reflBlock, reflTomorrow].filter(v => v.trim().length > 10).length;
+    const reflScore  = Math.round((reflFilled / 3) * 15);
+
+    return {
+      score: mitScore + habScore + blkScore + reflScore,
+      breakdown: [
+        { label: "Muhim vazifalar", score: mitScore, max: 35, pct: (mitScore / 35) * 100 },
+        { label: "Odatlar",         score: habScore, max: 25, pct: (habScore / 25) * 100 },
+        { label: "Fokus bloklari",  score: blkScore, max: 25, pct: (blkScore / 25) * 100 },
+        { label: "Refleksiya",      score: reflScore, max: 15, pct: (reflScore / 15) * 100 },
+      ],
+    };
+  }, [mitTasks, habits, blocks, reflWin, reflBlock, reflTomorrow]);
+
+  const { msg: scoreMsg, sub: scoreSub } = getScoreMessage(score);
+
+  /* UI state */
+  const [showBlockForm,    setShowBlockForm]    = useState(false);
+  const [showCapturePanel, setShowCapturePanel] = useState(false);
+
+  /* Avg energy helper */
+  const energyVals   = [energyMorning, energyAfternoon, energyEvening].filter(Boolean);
+  const avgEnergy    = energyVals.length ? (energyVals.reduce((a, b) => a + b, 0) / energyVals.length).toFixed(1) : null;
+
+  return (
+    <div className="min-h-screen bg-zinc-50">
+      <div className="max-w-2xl mx-auto px-4 py-6 pb-24 space-y-4">
+
+        {/* ── HEADER ── */}
+        <motion.div {...fadeUp} className="flex items-start justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest">
+              {TODAY.dayName}, {TODAY.day} {TODAY.month} · {TODAY.weekNum}-hafta
+            </p>
+            <h1 className="text-2xl font-black text-zinc-900 mt-0.5 tracking-tight">Kunlik reja</h1>
+            <p className="text-xs text-zinc-400 mt-0.5">{greeting(TODAY.hour)}</p>
+          </div>
+          <button
+            onClick={() => setShowCapturePanel(v => !v)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 bg-white text-xs font-medium text-zinc-600 hover:border-zinc-400 transition-colors mt-1"
+          >
+            <Inbox className="w-3.5 h-3.5" />
+            Capture
+            {captures.length > 0 && (
+              <span className="bg-zinc-900 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+                {captures.length}
+              </span>
+            )}
+          </button>
+        </motion.div>
+
+        {/* ── DAILY SCORE HERO ── */}
+        <Section noPad>
+          <div className="p-5 flex items-center gap-5">
+            <ScoreRing score={score} size={100} />
+            <div className="flex-1 min-w-0">
+              <p className="text-lg font-black text-zinc-900 leading-tight">{scoreMsg}</p>
+              <p className="text-xs text-zinc-400 mt-0.5">{scoreSub}</p>
+              {intention && (
+                <div className="mt-2 flex items-start gap-1.5">
+                  <Star className="w-3 h-3 text-zinc-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-[12px] text-zinc-600 italic leading-snug">"{intention}"</p>
+                </div>
               )}
             </div>
+          </div>
+          <div className="border-t border-zinc-100 px-5 pb-4">
+            <ScoreBreakdown items={breakdown} />
+          </div>
+        </Section>
 
-            {priorities.length < 3 && (
-              <div className="px-5 pb-5 pt-1 space-y-3">
-                <div className="flex gap-2">
+        {/* ── MORNING INTENTION ── */}
+        <Section>
+          <SectionHead icon={Sparkles} title="Bugungi niyat" />
+          <input
+            value={intention}
+            onChange={e => setIntention(e.target.value)}
+            placeholder="Bugun men ... qilaman / bo'laman"
+            className="w-full text-sm bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-300 font-medium"
+          />
+        </Section>
+
+        {/* ── CAPTURE INBOX (collapsible) ── */}
+        <AnimatePresence>
+          {showCapturePanel && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <Section>
+                <SectionHead
+                  icon={Inbox}
+                  title="Tezkor qo'lga olish"
+                  badge={captures.length}
+                  action={
+                    <button onClick={() => setShowCapturePanel(false)} className="text-zinc-400 hover:text-zinc-700">
+                      <X className="w-4 h-4" />
+                    </button>
+                  }
+                />
+                <AnimatePresence mode="popLayout">
+                  {captures.map(item => <CaptureItem key={item.id} item={item} onRemove={removeCapture} />)}
+                </AnimatePresence>
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-zinc-100">
                   <input
-                    value={prioInput}
-                    onChange={(e) => setPrioInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addPriority()}
-                    placeholder="Muhim vazifa..."
-                    className="flex-1 h-10 rounded-xl bg-zinc-50 border border-zinc-200 text-[13px] px-4 outline-none focus:border-zinc-400 transition-all placeholder:text-zinc-400"
+                    value={captureInput}
+                    onChange={e => setCaptureInput(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && addCapture()}
+                    placeholder="G'oya, vazifa, eslatma..."
+                    className="flex-1 text-sm bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 outline-none focus:border-zinc-400 placeholder:text-zinc-300"
                   />
-                  <button onClick={addPriority} disabled={!prioInput.trim()} className="h-10 w-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center hover:bg-zinc-800 transition-colors disabled:opacity-30 flex-shrink-0">
-                    <Plus className="w-4 h-4" />
+                  <select
+                    value={captureTag}
+                    onChange={e => setCaptureTag(e.target.value)}
+                    className="text-xs bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-2 outline-none focus:border-zinc-400 text-zinc-600"
+                  >
+                    {CAPTURE_TAGS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  <button
+                    onClick={addCapture}
+                    disabled={!captureInput.trim()}
+                    className="w-8 h-8 rounded-xl bg-zinc-900 text-white flex items-center justify-center hover:bg-zinc-700 disabled:opacity-30 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {ENERGY_TYPES.map((e) => (
-                    <Pill key={e.key} active={prioEnergy === e.key} onClick={() => setPrioEnergy(e.key)}>
-                      <e.icon className="w-3 h-3 inline mr-1" />{e.label}
-                    </Pill>
-                  ))}
-                  <div className="w-px bg-zinc-200 mx-1" />
-                  {TIME_BLOCKS.map((t) => (
-                    <Pill key={t.key} active={prioTime === t.key} onClick={() => setPrioTime(t.key)}>
-                      {t.label}
-                    </Pill>
-                  ))}
-                </div>
-              </div>
-            )}
-            {priorities.length >= 3 && (
-              <p className="px-5 pb-4 text-[11px] text-zinc-400">3 ta vazifa belgilandi. Ko'p vazifa = kam fokus.</p>
-            )}
-          </Card>
+              </Section>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-          {/* ── TIME BLOCK PLANNER ── */}
-          <Card>
-            <SectionHead icon={Calendar} title="Vaqt bloklari" subtitle="Vazifalarni vaqt bo'yicha joylashtiring" />
-            <div className="px-5 pb-5 space-y-3">
-              {TIME_BLOCKS.map((block) => {
-                const blockPrios = priorities.filter((p) => p.time === block.key && !p.deferred);
-                return (
-                  <div key={block.key} className="rounded-xl border border-zinc-200 overflow-hidden">
-                    <div className="flex items-center gap-2.5 px-4 py-2.5 bg-zinc-50">
-                      <block.icon className="w-3.5 h-3.5 text-zinc-500" />
-                      <span className="text-[12px] font-semibold text-zinc-700">{block.label}</span>
-                      <span className="text-[10px] text-zinc-400">{block.sub}</span>
-                      <div className="flex-1" />
-                      <span className="text-[10px] font-bold text-zinc-400">{blockPrios.length} vazifa</span>
-                    </div>
-                    {blockPrios.length > 0 ? (
-                      <div className="px-3 py-2 space-y-1">
-                        {blockPrios.map((p) => (
-                          <div key={p.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-zinc-50 transition-colors cursor-pointer" onClick={() => togglePrio(p.id)}>
-                            <Checkbox checked={p.done} onClick={() => {}} size="sm" />
-                            <span className={cn("text-[12px] flex-1", p.done ? "line-through text-zinc-400" : "text-zinc-600 font-medium")}>{p.text}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="px-4 py-3 text-[11px] text-zinc-300">Bu vaqtda vazifa yo'q</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-
-          {/* ── FOCUS SESSIONS ── */}
-          <Card>
-            <SectionHead icon={Brain} title="Fokus sessiyalar" subtitle={`${totalPlannedMin} daqiqa rejalashtirilgan`} right={
-              <Link to="/focus" className="text-[11px] text-zinc-400 font-semibold hover:text-zinc-600 flex items-center gap-0.5">
-                Barchasi <ChevronRight className="w-3 h-3" />
-              </Link>
-            } />
-            <div className="px-5 pb-2 space-y-1.5">
+        {/* ── MIT — BIG 3 ── */}
+        <Section>
+          <SectionHead
+            icon={Zap}
+            title="Bugungi Big 3"
+            badge={`${mitTasks.filter(t => t.done).length}/${mitTasks.length}`}
+          />
+          {mitTasks.length === 0 ? (
+            <p className="text-sm text-zinc-400 py-2">Bugungi 3 ta eng muhim vazifani kiriting.</p>
+          ) : (
+            <div className="space-y-0.5">
               <AnimatePresence mode="popLayout">
-                {focusSessions.map((f) => (
-                  <motion.div key={f.id} layout initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }}
-                    className="flex items-center gap-3 bg-zinc-50 rounded-xl px-4 py-3 group"
-                  >
-                    <Checkbox checked={f.done} onClick={() => toggleFocus(f.id)} size="sm" />
-                    <span className={cn("text-[13px] flex-1 font-medium", f.done ? "line-through text-zinc-400" : "text-zinc-700")}>{f.text}</span>
-                    <span className="text-[11px] font-semibold text-zinc-400 tabular-nums">{f.dur}m</span>
-                    {!f.done && (
-                      <Link to="/focus" className="w-7 h-7 rounded-lg bg-zinc-900 text-white flex items-center justify-center hover:bg-zinc-800 transition-colors">
-                        <Play className="w-3 h-3" fill="currentColor" />
-                      </Link>
-                    )}
-                    <button onClick={() => removeFocus(f.id)} className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-lg flex items-center justify-center hover:bg-zinc-200 transition-all">
-                      <X className="w-3 h-3 text-zinc-400" />
-                    </button>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-
-              {focusSessions.length === 0 && (
-                <EmptyState icon={Brain} text="Chuqur ish sessiyasi qo'shing" />
-              )}
-            </div>
-
-            <div className="px-5 pb-5 pt-1">
-              <div className="flex gap-2">
-                <input value={focusInput} onChange={(e) => setFocusInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addFocus()}
-                  placeholder="Fokus mavzusi..." className="flex-1 h-10 rounded-xl bg-zinc-50 border border-zinc-200 text-[13px] px-4 outline-none focus:border-zinc-400 transition-all placeholder:text-zinc-400" />
-                {[25, 50, 90].map((d) => (
-                  <Pill key={d} active={focusDur === d} onClick={() => setFocusDur(d)}>{d}m</Pill>
-                ))}
-                <button onClick={addFocus} disabled={!focusInput.trim()} className="h-10 w-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center hover:bg-zinc-800 transition-colors disabled:opacity-30 flex-shrink-0">
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </Card>
-
-          {/* ── SUPPORTING TASKS ── */}
-          <Card>
-            <SectionHead icon={ChevronRight} title="Qo'shimcha vazifalar" subtitle="Ikkinchi darajali — vizual jihatdan engil" />
-            <div className="px-4 pb-2 space-y-0.5">
-              <AnimatePresence mode="popLayout">
-                {support.map((s) => (
-                  <motion.div key={s.id} layout initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -10, height: 0 }}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-zinc-50 group transition-colors"
-                  >
-                    <Checkbox checked={s.done} onClick={() => toggleSup(s.id)} size="sm" />
-                    <span className={cn("text-[12px] flex-1", s.done ? "line-through text-zinc-300" : "text-zinc-500")}>{s.text}</span>
-                    <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {priorities.length < 3 && !s.done && (
-                        <button onClick={() => promoteSup(s.id)} className="w-6 h-6 rounded flex items-center justify-center hover:bg-zinc-100" title="Asosiyga ko'tarish">
-                          <Zap className="w-3 h-3 text-zinc-400" />
-                        </button>
-                      )}
-                      <button onClick={() => removeSup(s.id)} className="w-6 h-6 rounded flex items-center justify-center hover:bg-zinc-100">
-                        <X className="w-3 h-3 text-zinc-300" />
-                      </button>
-                    </div>
-                  </motion.div>
+                {mitTasks.map((task, idx) => (
+                  <MITItem key={task.id} task={task} index={idx} onToggle={toggleMIT} onRemove={removeMIT} />
                 ))}
               </AnimatePresence>
             </div>
-            <div className="px-5 pb-5 pt-1">
-              <div className="flex gap-2">
-                <input value={supportInput} onChange={(e) => setSupportInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addSupport()}
-                  placeholder="Qo'shimcha vazifa..." className="flex-1 h-9 rounded-xl bg-zinc-50 border border-zinc-200 text-[12px] px-3 outline-none focus:border-zinc-400 transition-all placeholder:text-zinc-400" />
-                <button onClick={addSupport} disabled={!supportInput.trim()} className="h-9 w-9 rounded-xl bg-zinc-800 text-white flex items-center justify-center hover:bg-zinc-700 transition-colors disabled:opacity-30 flex-shrink-0">
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          </Card>
-        </div>
+          )}
+          {mitTasks.length < 3 && <MITAddForm onAdd={addMIT} />}
+          {mitTasks.length >= 3 && (
+            <p className="text-[11px] text-zinc-400 mt-3 text-center">✓ Big 3 to'ldirildi</p>
+          )}
+        </Section>
 
-        {/* ─── RIGHT 4 cols ─── */}
-        <div className="lg:col-span-4 space-y-5">
-
-          {/* ── HABITS ── */}
-          <Card>
-            <SectionHead icon={Flame} title="Bugungi odatlar" subtitle={`${habitsDone}/${habits.length} bajarildi`} right={
-              <Link to="/habits" className="text-[11px] text-zinc-400 font-semibold hover:text-zinc-600 flex items-center gap-0.5">
-                Barchasi <ChevronRight className="w-3 h-3" />
-              </Link>
-            } />
-            <div className="px-5 pb-2"><ProgressBar value={habits.length ? (habitsDone / habits.length) * 100 : 0} /></div>
-            <div className="px-4 pb-4 space-y-0.5">
-              {habits.map((h) => (
-                <div key={h.id} className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-zinc-50 cursor-pointer transition-colors" onClick={() => actions.toggleHabitCheckIn(h.id)}>
-                  <Checkbox checked={h.completedToday} onClick={() => {}} size="sm" />
-                  <span className={cn("text-[12px] flex-1", h.completedToday ? "line-through text-zinc-400" : "text-zinc-600")}>{h.title}</span>
-                  <div className="flex items-center gap-1 text-[10px] text-zinc-400">
-                    <Flame className="w-2.5 h-2.5" /><span className="tabular-nums font-semibold">{h.streak}</span>
-                  </div>
-                </div>
-              ))}
-              {habits.length === 0 && <EmptyState icon={Flame} text="Odat qo'shing" action={<Link to="/habits" className="text-[11px] text-zinc-500 underline mt-1">Odatlar →</Link>} />}
-            </div>
-          </Card>
-
-          {/* ── ENERGY / HEALTH CHECK ── */}
-          <Card>
-            <SectionHead icon={Battery} title="Energiya tekshiruvi" subtitle="Reja energiyangizga mos bo'lsin" />
-            <div className="px-5 pb-5 space-y-4">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2"><Moon className="w-3 h-3 inline mr-1" />Uyqu sifati</p>
-                <div className="flex gap-1.5">
-                  {SLEEP_OPTIONS.map((s) => <Pill key={s} active={sleep === s} onClick={() => setSleep(s)}>{s}</Pill>)}
-                </div>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2"><Zap className="w-3 h-3 inline mr-1" />Energiya</p>
-                <div className="flex gap-1.5">
-                  {ENERGY_LEVELS.map((e) => <Pill key={e} active={energyLvl === e} onClick={() => setEnergyLvl(e)}>{e}</Pill>)}
-                </div>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2"><Sun className="w-3 h-3 inline mr-1" />Kayfiyat</p>
-                <div className="flex gap-2">
-                  {MOOD_OPTIONS.map((m, i) => (
-                    <button key={m} onClick={() => setMoodVal(i)} className={cn("w-9 h-9 rounded-xl text-lg flex items-center justify-center transition-all border", moodVal === i ? "bg-zinc-900 border-zinc-900 scale-110" : "bg-white border-zinc-200 hover:border-zinc-300")}>
-                      {m}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2"><Droplets className="w-3 h-3 inline mr-1" />Suv ({hydration} stakan)</p>
-                <div className="flex gap-1">
-                  {Array.from({ length: 8 }, (_, i) => (
-                    <button key={i} onClick={() => setHydration(i + 1)}
-                      className={cn("w-7 h-7 rounded-lg text-[11px] font-bold transition-all border", i < hydration ? "bg-zinc-900 text-white border-zinc-900" : "bg-white text-zinc-400 border-zinc-200 hover:border-zinc-300")}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* ── QUICK CAPTURE ── */}
-          <Card>
-            <SectionHead icon={Lightbulb} title="Tez yozib qo'yish" subtitle="G'oyalar, chalg'ishlar, eslatmalar" />
-            <div className="px-5 pb-5 space-y-3">
-              <div className="flex gap-2">
-                <input value={captureInput} onChange={(e) => setCaptureInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCapture()}
-                  placeholder="Yozib qo'ying..." className="flex-1 h-9 rounded-xl bg-zinc-50 border border-zinc-200 text-[12px] px-3 outline-none focus:border-zinc-400 transition-all placeholder:text-zinc-400" />
-                <button onClick={addCapture} disabled={!captureInput.trim()} className="h-9 w-9 rounded-xl bg-zinc-900 text-white flex items-center justify-center hover:bg-zinc-800 disabled:opacity-30 flex-shrink-0">
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <div className="flex gap-1.5">
-                {CAPTURE_TAGS.map((t) => <Pill key={t.key} active={captureTag === t.key} onClick={() => setCaptureTag(t.key)}>{t.label}</Pill>)}
-              </div>
-              <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                {captures.map((c) => (
-                  <div key={c.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-zinc-50 group">
-                    <span className={cn("text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded", CAPTURE_TAGS.find(t => t.key === c.tag)?.color || "bg-zinc-200", "text-zinc-500")}>{c.tag}</span>
-                    <span className="text-[12px] text-zinc-600 flex-1 truncate">{c.text}</span>
-                    <button onClick={() => removeCapture(c.id)} className="opacity-0 group-hover:opacity-100"><X className="w-3 h-3 text-zinc-300" /></button>
-                  </div>
+        {/* ── TIME BLOCKS ── */}
+        <Section>
+          <SectionHead
+            icon={Layers}
+            title="Vaqt bloklari"
+            badge={`${blocks.reduce((s, b) => s + b.duration, 0)} min`}
+            action={
+              <button
+                onClick={() => setShowBlockForm(v => !v)}
+                className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-900 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Qo'shish
+              </button>
+            }
+          />
+          <div className="space-y-2">
+            <AnimatePresence mode="popLayout">
+              {blocks
+                .slice()
+                .sort((a, b) => (a.start ?? "99:99").localeCompare(b.start ?? "99:99"))
+                .map(block => (
+                  <TimeBlock key={block.id} block={block} onToggle={toggleBlock} onRemove={removeBlock} />
                 ))}
-              </div>
-            </div>
-          </Card>
+            </AnimatePresence>
+          </div>
+          <AnimatePresence>
+            {showBlockForm && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <BlockAddForm onAdd={b => { addBlock(b); setShowBlockForm(false); }} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Section>
 
-          {/* ── REFLECTION ── */}
-          <Card>
-            <SectionHead icon={Edit3} title="Kechki refleksiya" subtitle="Kunni yoping va ertani rejalashtiring" right={
-              <Link to="/reflection" className="text-[11px] text-zinc-400 font-semibold hover:text-zinc-600 flex items-center gap-0.5">
-                To'liq <ChevronRight className="w-3 h-3" />
-              </Link>
-            } />
-            <div className="px-5 pb-5 space-y-3">
-              {[
-                { label: "Bugungi yutug'im", icon: Sun, val: refWin, set: setRefWin, ph: "Eng yaxshi qilgan ishim..." },
-                { label: "Eng katta chalg'ish", icon: Sparkles, val: refDistract, set: setRefDistract, ph: "Nima to'sqinlik qildi..." },
-                { label: "Ertaga nima muhim", icon: ArrowRight, val: refTomorrow, set: setRefTomorrow, ph: "Ertangi eng muhim ish..." },
-              ].map((r) => (
-                <div key={r.label}>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">
-                    <r.icon className="w-3 h-3 inline mr-1" />{r.label}
-                  </label>
-                  <input value={r.val} onChange={(e) => r.set(e.target.value)} placeholder={r.ph}
-                    className="w-full h-9 rounded-xl bg-zinc-50 border border-zinc-200 text-[12px] px-3 outline-none focus:border-zinc-400 transition-colors placeholder:text-zinc-400" />
-                </div>
+        {/* ── TODAY'S HABITS ── */}
+        <Section>
+          <SectionHead
+            icon={Repeat}
+            title="Bugungi odatlar"
+            badge={`${habits.filter(h => h.completedToday).length}/${habits.length}`}
+          />
+          <div className="space-y-2">
+            {habits.map(habit => (
+              <motion.div key={habit.id} layout className="flex items-center gap-3 py-1 group">
+                <CB checked={habit.completedToday} onChange={() => toggleHabit(habit.id)} size="sm" />
+                <span className="text-base leading-none">{habit.icon}</span>
+                <span className={cn("flex-1 text-sm font-medium transition-all", habit.completedToday ? "line-through text-zinc-400" : "text-zinc-800")}>
+                  {habit.title}
+                </span>
+                {habit.streak > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Flame className="w-3 h-3 text-zinc-400" />
+                    <span className="text-[11px] font-bold text-zinc-400">{habit.streak}d</span>
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        </Section>
+
+        {/* ── SUPPORTING TASKS ── */}
+        <Section>
+          <SectionHead
+            icon={List}
+            title="Qo'shimcha vazifalar"
+            badge={`${tasks.filter(t => t.done).length}/${tasks.length}`}
+          />
+          <div className="space-y-1.5">
+            <AnimatePresence mode="popLayout">
+              {tasks.map(task => (
+                <motion.div key={task.id} layout {...slideIn} className="flex items-center gap-2.5 group py-0.5">
+                  <CB checked={task.done} onChange={() => toggleTask(task.id)} size="sm" />
+                  <span className={cn("flex-1 text-sm transition-all", task.done ? "line-through text-zinc-400" : "text-zinc-700")}>
+                    {task.text}
+                  </span>
+                  <button onClick={() => removeTask(task.id)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1">
+                    <X className="w-3 h-3 text-zinc-400 hover:text-zinc-700" />
+                  </button>
+                </motion.div>
               ))}
+            </AnimatePresence>
+          </div>
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-zinc-100">
+            <input
+              value={taskInput}
+              onChange={e => setTaskInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && addTask()}
+              placeholder="Vazifa qo'shing..."
+              className="flex-1 text-sm bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 outline-none focus:border-zinc-400 placeholder:text-zinc-300"
+            />
+            <button
+              onClick={addTask}
+              disabled={!taskInput.trim()}
+              className="w-8 h-8 rounded-xl bg-zinc-800 text-white flex items-center justify-center hover:bg-zinc-700 disabled:opacity-30 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </Section>
+
+        {/* ── ENERGY TRACKER ── */}
+        <Section>
+          <SectionHead icon={Activity} title="Energiya darajasi" />
+          <div className="space-y-3">
+            <EnergyCheckIn label="Ertalab"       icon={Sun}    value={energyMorning}   onChange={setEnergyMorning}   />
+            <EnergyCheckIn label="Tushdan keyin" icon={Zap}    value={energyAfternoon} onChange={setEnergyAfternoon} />
+            <EnergyCheckIn label="Kechqurun"     icon={Moon}   value={energyEvening}   onChange={setEnergyEvening}   />
+          </div>
+          {avgEnergy && (
+            <div className="mt-3 pt-3 border-t border-zinc-100 text-[11px] text-zinc-400 text-center">
+              O'rtacha energiya: <span className="font-bold text-zinc-700">{avgEnergy}</span>/5
             </div>
-          </Card>
-        </div>
+          )}
+        </Section>
+
+        {/* ── END-OF-DAY REFLECTION ── */}
+        <Section>
+          <SectionHead icon={Brain} title="Kunlik tahlil" />
+          <div className="space-y-3">
+            {[
+              { key: "win",      label: "Bugungi g'alaba nima?",         val: reflWin,      set: setReflWin      },
+              { key: "block",    label: "Nima to'sqinlik qildi?",        val: reflBlock,    set: setReflBlock    },
+              { key: "tomorrow", label: "Ertangi eng muhim qadam nima?", val: reflTomorrow, set: setReflTomorrow },
+            ].map(({ key, label, val, set }) => (
+              <div key={key}>
+                <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1.5 block">
+                  {label}
+                </label>
+                <textarea
+                  value={val}
+                  onChange={e => set(e.target.value)}
+                  rows={2}
+                  placeholder="..."
+                  className="w-full text-sm bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2.5 outline-none focus:border-zinc-400 transition-colors placeholder:text-zinc-200 resize-none"
+                />
+              </div>
+            ))}
+          </div>
+          {reflWin && reflBlock && reflTomorrow && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 flex items-center gap-2 bg-zinc-900 text-white rounded-xl px-4 py-3"
+            >
+              <Award className="w-4 h-4 flex-shrink-0" />
+              <span className="text-sm font-medium">Kun yopildi! Ajoyib ish.</span>
+            </motion.div>
+          )}
+        </Section>
+
+        <div className="h-4" />
       </div>
     </div>
   );
