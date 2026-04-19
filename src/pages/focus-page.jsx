@@ -1,751 +1,1134 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
-  Play,
-  Pause,
-  RotateCcw,
-  Clock,
-  Zap,
-  Target,
-  Check,
-  X,
-  Brain,
-  Timer,
-  Coffee,
+  Play, Pause, Square, Plus, Check, X, Clock, Flame,
+  Target, Zap, Brain, BarChart3, MoreHorizontal,
+  Edit3, Trash2, Eye, TrendingUp, Award,
+  AlertTriangle, Sparkles, AlarmClock, Timer, Coffee,
+  ChevronDown, RefreshCw, Lock, Activity,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
-// ── Session type presets ─────────────────────────────────────────────────────
-const SESSION_TYPES = [
-  { id: "pomodoro", label: "Pomodoro", work: 25, rest: 5, icon: Timer },
-  { id: "deep", label: "Deep Work", work: 50, rest: 10, icon: Brain },
-  { id: "study", label: "Study Block", work: 90, rest: 15, icon: Target },
-  { id: "custom", label: "Custom", work: 25, rest: 5, icon: Zap },
+/* ═══════════════════════════════════════════════════════════════════
+   CONSTANTS & SEED DATA
+   ═══════════════════════════════════════════════════════════════════ */
+
+const DURATIONS = [
+  { value: 25,  label: "25 min", desc: "Pomodoro"  },
+  { value: 50,  label: "50 min", desc: "Deep Work"  },
+  { value: 90,  label: "90 min", desc: "Flow State" },
 ];
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function formatTime(totalSeconds) {
-  const m = Math.floor(totalSeconds / 60);
-  const s = totalSeconds % 60;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
+const SAMPLE_TASKS = [
+  "Ingliz tili darsi",
+  "Loyiha arxitekturasi",
+  "Kod yozish — auth moduli",
+  "Kitob o'qish",
+  "Biznes-plan tayyorlash",
+  "UI dizayn",
+  "Maqola yozish",
+  "Tadqiqot",
+];
 
-function formatClockTime(date) {
-  return date.toLocaleTimeString("uz-UZ", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+const AI_INSIGHTS = [
+  {
+    icon: Clock,
+    title: "Eng samarali vaqt",
+    body: "Ma'lumotlarga ko'ra, siz ertalab 9–11 orasida eng yuqori diqqat ko'rsatasiz. Eng muhim ishlarni shu vaqtga rejalashtiring.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Haftalik o'sish",
+    body: "Bu hafta o'tgan haftaga qaraganda 40 daqiqa ko'proq chuqur ish vaqti qayd etildi. Shu sur'atni saqlang.",
+  },
+  {
+    icon: AlertTriangle,
+    title: "Uzilishlar",
+    body: "Har sessiyada o'rtacha 2.3 ta uzilish qayd qilingan. Telefon bildirishnomalarini o'chirib qo'ying.",
+  },
+  {
+    icon: Award,
+    title: "Eng uzun sessiya",
+    body: "Bugungi eng uzun sessiyangiz 90 daqiqa. Bu chuqur ish uchun ideal muddat — davom eting!",
+  },
+];
+
+const AI_SUGGESTIONS = [
+  "Har sessiyadan oldin 2 daqiqa meditatsiya qiling — diqqatni keskin oshiradi.",
+  "90 daqiqadan keyin 20 daqiqa dam oling — bu miya ritmi bilan mos keladi.",
+  "Eng muhim vazifani ertalab birinchi sessiyaga qo'ying.",
+  "Har kuni bir xil vaqtda fokus sessiyasini boshlash odatini shakllantiring.",
+];
 
 function getTodayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// ── SVG circular progress ────────────────────────────────────────────────────
-const CIRCLE_RADIUS = 140;
-const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS;
+function generateSeedSessions() {
+  const result = [];
+  const today = new Date();
+  const tasks = [...SAMPLE_TASKS];
 
-function TimerCircle({ progress, isRunning, isBreak }) {
-  const offset = CIRCLE_CIRCUMFERENCE * (1 - progress);
+  // Past 7 days
+  for (let daysAgo = 6; daysAgo >= 0; daysAgo--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - daysAgo);
+    const dateStr = d.toISOString().slice(0, 10);
+    const count = daysAgo === 0 ? 2 : (daysAgo % 3 === 0 ? 1 : daysAgo % 2 === 0 ? 3 : 2);
+
+    for (let j = 0; j < count; j++) {
+      const dur = DURATIONS[j % DURATIONS.length].value;
+      const startHour = 8 + Math.floor(j * 2.5 + daysAgo % 3);
+      result.push({
+        id: `seed-${dateStr}-${j}`,
+        task: tasks[(daysAgo * 3 + j) % tasks.length],
+        goal: "Bugungi muhim qadamni bajaring",
+        duration: dur,
+        date: dateStr,
+        startHour: startHour % 22,
+        focusRating: 3 + (j % 3),
+        goalCompleted: j % 3 !== 2,
+        distractions: j % 2 === 0 ? [{ id: 1, text: "Telefon" }] : [],
+        notes: j === 0 ? "Juda samarali bo'ldi." : "",
+      });
+    }
+  }
+  return result;
+}
+
+const SEED_SESSIONS = generateSeedSessions();
+
+/* ═══════════════════════════════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════════════════════════════ */
+
+function fmt(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function clockNow() {
+  return new Date().toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FULL-SCREEN FOCUS MODE
+   ═══════════════════════════════════════════════════════════════════ */
+
+function FocusMode({
+  session,        // { task, goal, duration }
+  timeLeft,
+  totalTime,
+  isRunning,
+  isPaused,
+  distractions,
+  onPause,
+  onResume,
+  onExtend,
+  onFinish,
+  onAbort,
+  onAddDistraction,
+}) {
+  const [distInput, setDistInput] = useState("");
+  const [showControls, setShowControls] = useState(true);
+  const [clock, setClock] = useState(clockNow());
+  const pct = totalTime > 0 ? (timeLeft / totalTime) * 100 : 0;
+
+  useEffect(() => {
+    const t = setInterval(() => setClock(clockNow()), 10000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Auto-hide controls after 4 seconds of running
+  useEffect(() => {
+    if (!isRunning || isPaused) { setShowControls(true); return; }
+    const t = setTimeout(() => setShowControls(false), 4000);
+    return () => clearTimeout(t);
+  }, [isRunning, isPaused]);
+
+  const handleAddDist = () => {
+    const t = distInput.trim();
+    if (!t) return;
+    onAddDistraction(t);
+    setDistInput("");
+  };
 
   return (
-    <svg
-      width="320"
-      height="320"
-      viewBox="0 0 320 320"
-      className="absolute inset-0 m-auto"
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
+      className="fixed inset-0 z-50 bg-white flex flex-col"
+      onClick={() => setShowControls(v => !v)}
     >
-      {/* Background track */}
-      <circle
-        cx="160"
-        cy="160"
-        r={CIRCLE_RADIUS}
-        fill="none"
-        stroke={isBreak ? "#e2e8f0" : "#f1f5f9"}
-        strokeWidth="6"
-      />
-      {/* Progress arc */}
-      <motion.circle
-        cx="160"
-        cy="160"
-        r={CIRCLE_RADIUS}
-        fill="none"
-        stroke={isBreak ? "#94a3b8" : "#0f172a"}
-        strokeWidth="6"
-        strokeLinecap="round"
-        strokeDasharray={CIRCLE_CIRCUMFERENCE}
-        strokeDashoffset={offset}
-        transform="rotate(-90 160 160)"
-        initial={false}
-        animate={
-          isRunning
-            ? {
-                filter: [
-                  "drop-shadow(0 0 4px rgba(15,23,42,0.15))",
-                  "drop-shadow(0 0 8px rgba(15,23,42,0.25))",
-                  "drop-shadow(0 0 4px rgba(15,23,42,0.15))",
-                ],
-              }
-            : { filter: "drop-shadow(0 0 0px rgba(15,23,42,0))" }
-        }
-        transition={
-          isRunning
-            ? { duration: 3, repeat: Infinity, ease: "easeInOut" }
-            : { duration: 0.5 }
-        }
-      />
-    </svg>
+      {/* Top bar */}
+      <AnimatePresence>
+        {showControls && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="flex items-center justify-between px-6 pt-5 pb-2"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-zinc-900 animate-pulse" />
+              <span className="text-xs font-bold text-zinc-400 tracking-widest uppercase">
+                {isPaused ? "Pauzada" : "Deep Work"}
+              </span>
+            </div>
+            <span className="text-xs text-zinc-400 font-medium">{clock}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6">
+        {/* Progress bar — thin, at top */}
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-zinc-100">
+          <motion.div
+            className="h-full bg-zinc-900"
+            initial={{ width: "100%" }}
+            animate={{ width: `${pct}%` }}
+            transition={{ duration: 0.5, ease: "linear" }}
+          />
+        </div>
+
+        {/* Breathing bg when running */}
+        {isRunning && !isPaused && (
+          <motion.div
+            className="absolute inset-0 bg-zinc-50 rounded-full scale-150"
+            animate={{ opacity: [0, 0.3, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          />
+        )}
+
+        {/* Timer */}
+        <div className="relative z-10 text-center">
+          <motion.div
+            key={Math.floor(timeLeft / 60)}
+            initial={{ opacity: 0.7, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={cn(
+              "text-[96px] sm:text-[128px] font-black tracking-tighter tabular-nums leading-none",
+              isPaused ? "text-zinc-400" : "text-zinc-900"
+            )}
+          >
+            {fmt(timeLeft)}
+          </motion.div>
+        </div>
+
+        {/* Task + goal */}
+        <AnimatePresence>
+          {showControls && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="text-center space-y-1 z-10"
+            >
+              <p className="text-base font-semibold text-zinc-700">{session.task}</p>
+              {session.goal && (
+                <p className="text-sm text-zinc-400 flex items-center justify-center gap-1.5">
+                  <Target className="w-3.5 h-3.5" />
+                  {session.goal}
+                </p>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Bottom controls */}
+      <AnimatePresence>
+        {showControls && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            className="px-6 pb-8 space-y-4"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Main controls */}
+            <div className="flex items-center justify-center gap-3">
+              {isPaused ? (
+                <button
+                  onClick={onResume}
+                  className="flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white rounded-2xl font-semibold text-sm hover:bg-zinc-700 transition-colors"
+                >
+                  <Play className="w-4 h-4" />
+                  Davom etish
+                </button>
+              ) : (
+                <button
+                  onClick={onPause}
+                  className="flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white rounded-2xl font-semibold text-sm hover:bg-zinc-700 transition-colors"
+                >
+                  <Pause className="w-4 h-4" />
+                  Pauza
+                </button>
+              )}
+              <button
+                onClick={() => onExtend(10)}
+                className="px-4 py-3 border border-zinc-200 text-zinc-700 rounded-2xl font-semibold text-sm hover:border-zinc-400 transition-colors"
+              >
+                +10m
+              </button>
+              <button
+                onClick={() => onExtend(25)}
+                className="px-4 py-3 border border-zinc-200 text-zinc-700 rounded-2xl font-semibold text-sm hover:border-zinc-400 transition-colors"
+              >
+                +25m
+              </button>
+            </div>
+
+            {/* Finish / Stop row */}
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={onFinish}
+                className="flex items-center gap-2 px-5 py-2.5 border border-zinc-200 text-zinc-700 rounded-xl text-sm font-medium hover:border-zinc-400 transition-colors"
+              >
+                <Check className="w-3.5 h-3.5" />
+                Yakunlash
+              </button>
+              <button
+                onClick={onAbort}
+                className="flex items-center gap-2 px-5 py-2.5 border border-zinc-200 text-zinc-500 rounded-xl text-sm hover:border-red-200 hover:text-red-500 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+                Bekor qilish
+              </button>
+            </div>
+
+            {/* Distraction log */}
+            <div className="max-w-sm mx-auto">
+              <p className="text-[11px] text-zinc-400 text-center mb-2 uppercase tracking-wider">
+                Uzilish qayd qilish ({distractions.length})
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  value={distInput}
+                  onChange={e => setDistInput(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleAddDist()}
+                  placeholder="Nima uzilish berdi?"
+                  className="flex-1 text-sm bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 outline-none focus:border-zinc-400 placeholder:text-zinc-300"
+                />
+                <button
+                  onClick={handleAddDist}
+                  disabled={!distInput.trim()}
+                  className="w-9 h-9 rounded-xl bg-zinc-900 text-white flex items-center justify-center hover:bg-zinc-700 disabled:opacity-30 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              {distractions.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {distractions.map(d => (
+                    <span key={d.id} className="text-[11px] bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-full">
+                      {d.text}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
-// ── Main Component ───────────────────────────────────────────────────────────
-export default function FocusPage() {
-  // ── State ────────────────────────────────────────────────────────────────
-  const [selectedType, setSelectedType] = useState("pomodoro");
-  const [customWork, setCustomWork] = useState(25);
-  const [customRest, setCustomRest] = useState(5);
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
-  const [isRunning, setIsRunning] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [isBreak, setIsBreak] = useState(false);
-  const [currentTask, setCurrentTask] = useState("");
-  const [sessions, setSessions] = useState([]);
-  const [isFocusMode, setIsFocusMode] = useState(false);
-  const [showComplete, setShowComplete] = useState(false);
+/* ═══════════════════════════════════════════════════════════════════
+   POST-SESSION REFLECTION MODAL
+   ═══════════════════════════════════════════════════════════════════ */
 
+function ReflectionModal({ session, onSave, onSkip }) {
+  const [goalCompleted, setGoalCompleted] = useState(null);
+  const [rating,        setRating]        = useState(null);
+  const [notes,         setNotes]         = useState("");
+
+  const canSave = goalCompleted !== null && rating !== null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4"
+    >
+      <motion.div
+        initial={{ y: 60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 60, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+        className="bg-white rounded-2xl w-full max-w-md p-6 space-y-5"
+      >
+        {/* Header */}
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-8 h-8 rounded-xl bg-zinc-900 flex items-center justify-center">
+              <Check className="w-4 h-4 text-white" />
+            </div>
+            <h2 className="text-base font-black text-zinc-900">Sessiya yakunlandi</h2>
+          </div>
+          <p className="text-xs text-zinc-400 ml-10">
+            {session.task} · {session.duration} daqiqa
+          </p>
+        </div>
+
+        {/* Goal completed */}
+        <div>
+          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">
+            Maqsadga erishdingizmi?
+          </p>
+          {session.goal && (
+            <p className="text-sm text-zinc-600 italic mb-3">"{session.goal}"</p>
+          )}
+          <div className="flex gap-2">
+            {[{ val: true, label: "✓  Ha, bajardim" }, { val: false, label: "✗  Bajarilmadi" }].map(({ val, label }) => (
+              <button
+                key={String(val)}
+                onClick={() => setGoalCompleted(val)}
+                className={cn(
+                  "flex-1 py-2.5 rounded-xl text-sm font-medium border-2 transition-all",
+                  goalCompleted === val
+                    ? val ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-400 bg-zinc-100 text-zinc-700"
+                    : "border-zinc-200 text-zinc-500 hover:border-zinc-400"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Focus rating */}
+        <div>
+          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">
+            Diqqat darajasi qanday edi?
+          </p>
+          <div className="flex gap-2">
+            {[1, 2, 3, 4, 5].map(n => (
+              <button
+                key={n}
+                onClick={() => setRating(n)}
+                className={cn(
+                  "flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all",
+                  rating === n ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200 text-zinc-400 hover:border-zinc-400"
+                )}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <div className="flex justify-between text-[10px] text-zinc-300 mt-1 px-0.5">
+            <span>Past</span><span>Juda yuqori</span>
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div>
+          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">
+            Izohlar (ixtiyoriy)
+          </p>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="Bu sessiya haqida fikrlar..."
+            rows={2}
+            className="w-full text-sm bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2.5 outline-none focus:border-zinc-400 resize-none placeholder:text-zinc-300"
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <button onClick={onSkip} className="flex-1 py-3 border border-zinc-200 text-zinc-500 rounded-xl text-sm hover:border-zinc-400 transition-colors">
+            O'tkazib yuborish
+          </button>
+          <button
+            disabled={!canSave}
+            onClick={() => onSave({ goalCompleted, rating, notes })}
+            className="flex-1 py-3 bg-zinc-900 text-white rounded-xl text-sm font-semibold hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Saqlash
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   STAT CARD
+   ═══════════════════════════════════════════════════════════════════ */
+
+function StatCard({ icon: Icon, label, value, sub }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white border border-zinc-200 rounded-2xl p-4"
+    >
+      <div className="w-7 h-7 rounded-lg bg-zinc-100 flex items-center justify-center mb-3">
+        <Icon className="w-3.5 h-3.5 text-zinc-600" strokeWidth={2.2} />
+      </div>
+      <p className="text-2xl font-black text-zinc-900 leading-none">{value}</p>
+      <p className="text-xs font-medium text-zinc-500 mt-1">{label}</p>
+      {sub && <p className="text-[11px] text-zinc-400 mt-0.5">{sub}</p>}
+    </motion.div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ANALYTICS — WEEKLY BAR CHART
+   ═══════════════════════════════════════════════════════════════════ */
+
+function WeeklyChart({ sessions }) {
+  const days = useMemo(() => {
+    const result = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().slice(0, 10);
+      const dayLabel = d.toLocaleDateString("en-US", { weekday: "short" });
+      const mins = sessions.filter(s => s.date === dateStr).reduce((s, e) => s + e.duration, 0);
+      result.push({ label: dayLabel, mins, dateStr, isToday: i === 0 });
+    }
+    return result;
+  }, [sessions]);
+
+  const maxMins = Math.max(...days.map(d => d.mins), 1);
+
+  return (
+    <div>
+      <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+        Haftalik fokus vaqti (daqiqa)
+      </p>
+      <div className="flex items-end gap-1.5 h-24">
+        {days.map(day => (
+          <div key={day.dateStr} className="flex-1 flex flex-col items-center gap-1">
+            <div className="w-full flex flex-col justify-end h-20">
+              <motion.div
+                initial={{ height: 0 }}
+                animate={{ height: `${(day.mins / maxMins) * 100}%` }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className={cn(
+                  "w-full rounded-t-md",
+                  day.isToday ? "bg-zinc-900" : "bg-zinc-200"
+                )}
+              />
+            </div>
+            <span className={cn("text-[10px] font-medium", day.isToday ? "text-zinc-900" : "text-zinc-400")}>
+              {day.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ANALYTICS — BEST HOURS
+   ═══════════════════════════════════════════════════════════════════ */
+
+function BestHours({ sessions }) {
+  const hourBuckets = useMemo(() => {
+    const buckets = Array.from({ length: 6 }, (_, i) => ({
+      label: `${(i * 4).toString().padStart(2, "0")}–${((i + 1) * 4).toString().padStart(2, "0")}`,
+      mins: 0,
+    }));
+    sessions.forEach(s => {
+      const bucket = Math.floor(s.startHour / 4);
+      if (bucket < 6) buckets[bucket].mins += s.duration;
+    });
+    return buckets;
+  }, [sessions]);
+
+  const maxMins = Math.max(...hourBuckets.map(b => b.mins), 1);
+
+  return (
+    <div>
+      <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+        Eng samarali soatlar
+      </p>
+      <div className="space-y-2">
+        {hourBuckets.map(b => (
+          <div key={b.label} className="flex items-center gap-3">
+            <span className="text-[11px] text-zinc-400 w-12 flex-shrink-0">{b.label}</span>
+            <div className="flex-1 h-2 bg-zinc-100 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-zinc-900 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${(b.mins / maxMins) * 100}%` }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+              />
+            </div>
+            <span className="text-[11px] font-semibold text-zinc-500 w-12 text-right">{b.mins}m</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PLAN SESSION CARD
+   ═══════════════════════════════════════════════════════════════════ */
+
+function PlanCard({ plan, onStart, onDelete }) {
+  const dur = DURATIONS.find(d => d.value === plan.duration) ?? DURATIONS[1];
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 8 }}
+      className="flex items-center gap-3 bg-white border border-zinc-200 rounded-xl px-4 py-3 group"
+    >
+      <div className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center flex-shrink-0">
+        <Brain className="w-3.5 h-3.5 text-zinc-600" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-zinc-900 truncate">{plan.task}</p>
+        {plan.goal && <p className="text-[11px] text-zinc-400 truncate">{plan.goal}</p>}
+      </div>
+      <span className="text-[11px] font-medium text-zinc-500 flex-shrink-0">{dur.label}</span>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={() => onStart(plan)}
+          className="w-7 h-7 rounded-lg bg-zinc-900 text-white flex items-center justify-center hover:bg-zinc-700 transition-colors"
+        >
+          <Play className="w-3 h-3" />
+        </button>
+        <button
+          onClick={() => onDelete(plan.id)}
+          className="w-7 h-7 rounded-lg border border-zinc-200 text-zinc-400 flex items-center justify-center hover:border-red-200 hover:text-red-500 transition-colors"
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   COMPLETED SESSION ROW
+   ═══════════════════════════════════════════════════════════════════ */
+
+function SessionRow({ session }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setExpanded(v => !v)}
+        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-zinc-50 transition-colors"
+      >
+        <div className={cn(
+          "w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0",
+          session.goalCompleted ? "bg-zinc-900" : "bg-zinc-200"
+        )}>
+          {session.goalCompleted
+            ? <Check className="w-3.5 h-3.5 text-white" />
+            : <X className="w-3.5 h-3.5 text-zinc-500" />
+          }
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-zinc-900 truncate">{session.task}</p>
+          <p className="text-[11px] text-zinc-400">
+            {session.duration}m
+            {session.focusRating && ` · Diqqat: ${session.focusRating}/5`}
+            {session.distractions?.length > 0 && ` · ${session.distractions.length} uzilish`}
+          </p>
+        </div>
+        <ChevronDown className={cn("w-4 h-4 text-zinc-400 transition-transform", expanded && "rotate-180")} />
+      </button>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-t border-zinc-100"
+          >
+            <div className="px-4 py-3 space-y-2">
+              {session.goal && (
+                <p className="text-xs text-zinc-500">
+                  <span className="font-semibold">Maqsad:</span> {session.goal}
+                </p>
+              )}
+              {session.notes && (
+                <p className="text-xs text-zinc-500">
+                  <span className="font-semibold">Izoh:</span> {session.notes}
+                </p>
+              )}
+              {session.distractions?.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {session.distractions.map((d, i) => (
+                    <span key={i} className="text-[11px] bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-full">
+                      {d.text ?? d}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MAIN PAGE
+   ═══════════════════════════════════════════════════════════════════ */
+
+export default function FocusPage() {
+  /* — Completed sessions — */
+  const [sessions, setSessions] = useState(SEED_SESSIONS);
+
+  /* — Planned sessions — */
+  const [plans, setPlans] = useState([
+    { id: "p1", task: "Ingliz tili — Speaking practice", goal: "30 ta yangi so'z", duration: 50 },
+    { id: "p2", task: "Loyiha kodi — API modul",         goal: "CRUD endpointlarni tugatish", duration: 90 },
+  ]);
+
+  /* — Active session state — */
+  const [activeSession, setActiveSession] = useState(null); // { task, goal, duration, distractions }
+  const [timeLeft,      setTimeLeft]      = useState(0);
+  const [totalTime,     setTotalTime]     = useState(0);
+  const [isRunning,     setIsRunning]     = useState(false);
+  const [isPaused,      setIsPaused]      = useState(false);
+  const [isFocusMode,   setIsFocusMode]   = useState(false);
+  const [distractions,  setDistractions]  = useState([]);
+
+  /* — Reflection — */
+  const [showReflection, setShowReflection] = useState(false);
+  const [finishedSession, setFinishedSession] = useState(null);
+
+  /* — Session setup form — */
+  const [setupTask,     setSetupTask]     = useState("");
+  const [setupGoal,     setSetupGoal]     = useState("");
+  const [setupDuration, setSetupDuration] = useState(50);
+
+  /* — Tab — */
+  const [tab, setTab] = useState("today"); // today | analytics | ai
+
+  /* — Timer interval — */
   const intervalRef = useRef(null);
 
-  // ── Derived values ───────────────────────────────────────────────────────
-  const activePreset = SESSION_TYPES.find((t) => t.id === selectedType);
-  const workMinutes =
-    selectedType === "custom" ? customWork : activePreset.work;
-  const restMinutes =
-    selectedType === "custom" ? customRest : activePreset.rest;
-  const totalSeconds = isBreak ? restMinutes * 60 : workMinutes * 60;
-  const progress = totalSeconds > 0 ? timeLeft / totalSeconds : 0;
-
-  const todaySessions = useMemo(
-    () => sessions.filter((s) => s.date === getTodayKey()),
-    [sessions],
-  );
-
-  const todayMinutes = useMemo(
-    () => todaySessions.reduce((sum, s) => sum + s.duration, 0),
-    [todaySessions],
-  );
-
-  const weekMinutes = useMemo(() => {
-    const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay());
-    weekStart.setHours(0, 0, 0, 0);
-    return sessions
-      .filter((s) => new Date(s.completedAt) >= weekStart)
-      .reduce((sum, s) => sum + s.duration, 0);
-  }, [sessions]);
-
-  const bestStreak = useMemo(() => {
-    if (sessions.length === 0) return 0;
-    const uniqueDays = [...new Set(sessions.map((s) => s.date))].sort();
-    let max = 1;
-    let current = 1;
-    for (let i = 1; i < uniqueDays.length; i++) {
-      const prev = new Date(uniqueDays[i - 1]);
-      const curr = new Date(uniqueDays[i]);
-      const diff = (curr - prev) / (1000 * 60 * 60 * 24);
-      if (diff === 1) {
-        current++;
-        max = Math.max(max, current);
-      } else {
-        current = 1;
-      }
-    }
-    return max;
-  }, [sessions]);
-
-  // ── Timer logic ──────────────────────────────────────────────────────────
-  const clearTimer = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
+  /* — Timer logic — */
+  const stopTimer = useCallback(() => {
+    clearInterval(intervalRef.current);
+    intervalRef.current = null;
   }, []);
-
-  const handleComplete = useCallback(() => {
-    clearTimer();
-    if (!isBreak) {
-      const session = {
-        id: Date.now(),
-        task: currentTask || "Nomsiz sessiya",
-        duration: workMinutes,
-        completedAt: new Date().toISOString(),
-        date: getTodayKey(),
-        time: formatClockTime(new Date()),
-      };
-      setSessions((prev) => [...prev, session]);
-      setShowComplete(true);
-      setTimeout(() => setShowComplete(false), 2500);
-      // Start break timer
-      setIsBreak(true);
-      setTimeLeft(restMinutes * 60);
-      setIsRunning(true);
-      setIsPaused(false);
-    } else {
-      // Break finished
-      setIsBreak(false);
-      setIsRunning(false);
-      setIsPaused(false);
-      setIsFocusMode(false);
-      setTimeLeft(workMinutes * 60);
-    }
-  }, [isBreak, currentTask, workMinutes, restMinutes, clearTimer]);
 
   useEffect(() => {
     if (isRunning && !isPaused) {
       intervalRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            return 0;
-          }
+        setTimeLeft(prev => {
+          if (prev <= 1) { stopTimer(); return 0; }
           return prev - 1;
         });
       }, 1000);
     } else {
-      clearTimer();
+      stopTimer();
     }
-    return clearTimer;
-  }, [isRunning, isPaused, clearTimer]);
+    return stopTimer;
+  }, [isRunning, isPaused, stopTimer]);
 
-  // Watch for timeLeft hitting zero
+  // Watch for timer hitting zero
   useEffect(() => {
-    if (timeLeft === 0 && isRunning) {
-      handleComplete();
+    if (timeLeft === 0 && isRunning && activeSession) {
+      handleFinish();
     }
-  }, [timeLeft, isRunning, handleComplete]);
+  }, [timeLeft]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Controls ─────────────────────────────────────────────────────────────
-  const handleStart = () => {
-    if (!isRunning) {
-      setTimeLeft(totalSeconds);
-      setIsRunning(true);
-      setIsPaused(false);
-      setIsFocusMode(true);
-      setIsBreak(false);
-    } else if (isPaused) {
-      setIsPaused(false);
-    }
+  /* — Start session — */
+  const startSession = useCallback((session) => {
+    const secs = session.duration * 60;
+    setActiveSession(session);
+    setTimeLeft(secs);
+    setTotalTime(secs);
+    setDistractions([]);
+    setIsRunning(true);
+    setIsPaused(false);
+    setIsFocusMode(true);
+  }, []);
+
+  /* — Pause / Resume — */
+  const handlePause  = () => { setIsPaused(true);  setIsRunning(false); };
+  const handleResume = () => { setIsPaused(false); setIsRunning(true);  };
+
+  /* — Extend — */
+  const handleExtend = (mins) => {
+    setTimeLeft(prev => prev + mins * 60);
+    setTotalTime(prev => prev + mins * 60);
   };
 
-  const handlePause = () => {
-    setIsPaused(true);
-  };
+  /* — Finish session (natural end or manual) — */
+  const handleFinish = useCallback(() => {
+    stopTimer();
+    setIsRunning(false);
+    setIsFocusMode(false);
+    setIsPaused(false);
+    if (activeSession) {
+      setFinishedSession({ ...activeSession, distractions: [...distractions] });
+      setShowReflection(true);
+    }
+  }, [activeSession, distractions, stopTimer]);
 
-  const handleReset = () => {
-    clearTimer();
+  /* — Abort session — */
+  const handleAbort = () => {
+    stopTimer();
     setIsRunning(false);
     setIsPaused(false);
-    setIsBreak(false);
     setIsFocusMode(false);
-    setTimeLeft(workMinutes * 60);
+    setActiveSession(null);
   };
 
-  const selectType = (id) => {
-    if (isRunning) return;
-    setSelectedType(id);
-    const preset = SESSION_TYPES.find((t) => t.id === id);
-    const mins = id === "custom" ? customWork : preset.work;
-    setTimeLeft(mins * 60);
-    setIsBreak(false);
+  /* — Save reflection — */
+  const handleSaveReflection = useCallback((reflection) => {
+    const completed = {
+      id: Date.now(),
+      task: finishedSession.task,
+      goal: finishedSession.goal,
+      duration: finishedSession.duration,
+      date: getTodayKey(),
+      startHour: new Date().getHours(),
+      distractions: finishedSession.distractions,
+      ...reflection,
+    };
+    setSessions(prev => [completed, ...prev]);
+    setShowReflection(false);
+    setFinishedSession(null);
+    setActiveSession(null);
+    // Remove from plans if it came from a plan
+    if (finishedSession.planId) {
+      setPlans(prev => prev.filter(p => p.id !== finishedSession.planId));
+    }
+  }, [finishedSession]);
+
+  const handleSkipReflection = useCallback(() => {
+    const completed = {
+      id: Date.now(),
+      task: finishedSession.task,
+      goal: finishedSession.goal,
+      duration: finishedSession.duration,
+      date: getTodayKey(),
+      startHour: new Date().getHours(),
+      distractions: finishedSession.distractions,
+      goalCompleted: null,
+      focusRating: null,
+      notes: "",
+    };
+    setSessions(prev => [completed, ...prev]);
+    setShowReflection(false);
+    setFinishedSession(null);
+    setActiveSession(null);
+  }, [finishedSession]);
+
+  /* — Plan actions — */
+  const startFromPlan = useCallback((plan) => {
+    startSession({ ...plan, planId: plan.id });
+  }, [startSession]);
+
+  const deletePlan = useCallback((id) => {
+    setPlans(prev => prev.filter(p => p.id !== id));
+  }, []);
+
+  const addPlan = () => {
+    if (!setupTask.trim()) return;
+    setPlans(prev => [...prev, {
+      id: `p-${Date.now()}`,
+      task: setupTask.trim(),
+      goal: setupGoal.trim(),
+      duration: setupDuration,
+    }]);
+    setSetupTask("");
+    setSetupGoal("");
   };
 
-  // ── Focus Mode (fullscreen-like) ─────────────────────────────────────────
-  if (isFocusMode) {
-    return (
+  /* — Stats — */
+  const todaySessions = useMemo(() => sessions.filter(s => s.date === getTodayKey()), [sessions]);
+  const todayMins     = useMemo(() => todaySessions.reduce((s, e) => s + e.duration, 0), [todaySessions]);
+
+  const streak = useMemo(() => {
+    const dates = [...new Set(sessions.map(s => s.date))].sort().reverse();
+    const today = getTodayKey();
+    let count = 0;
+    let d = new Date(today);
+    for (const dateStr of dates) {
+      if (dateStr === d.toISOString().slice(0, 10)) { count++; d.setDate(d.getDate() - 1); }
+      else break;
+    }
+    return count;
+  }, [sessions]);
+
+  const deepWorkScore = useMemo(() => {
+    const last7 = sessions.filter(s => {
+      const d = new Date(); d.setDate(d.getDate() - 7);
+      return new Date(s.date) >= d;
+    });
+    const totalMins = last7.reduce((s, e) => s + e.duration, 0);
+    const avgRating = last7.filter(s => s.focusRating).reduce((s, e, _, a) => s + e.focusRating / a.length, 0);
+    return Math.min(100, Math.round((totalMins / 5) * (avgRating / 5 || 0.7)));
+  }, [sessions]);
+
+  return (
+    <>
+      {/* ── FOCUS MODE OVERLAY ── */}
       <AnimatePresence>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white"
-        >
-          {/* Subtle background pulse */}
-          <motion.div
-            className="absolute inset-0 bg-slate-50"
-            animate={{ opacity: [0, 0.5, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        {isFocusMode && activeSession && (
+          <FocusMode
+            session={activeSession}
+            timeLeft={timeLeft}
+            totalTime={totalTime}
+            isRunning={isRunning}
+            isPaused={isPaused}
+            distractions={distractions}
+            onPause={handlePause}
+            onResume={handleResume}
+            onExtend={handleExtend}
+            onFinish={handleFinish}
+            onAbort={handleAbort}
+            onAddDistraction={(text) => setDistractions(prev => [...prev, { id: Date.now(), text }])}
           />
+        )}
+      </AnimatePresence>
 
-          <div className="relative z-10 flex flex-col items-center gap-8">
-            {/* Break / Work indicator */}
-            <motion.p
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400"
-            >
-              {isBreak ? "Dam olish" : "Ish sessiyasi"}
-            </motion.p>
+      {/* ── REFLECTION MODAL ── */}
+      <AnimatePresence>
+        {showReflection && finishedSession && (
+          <ReflectionModal
+            session={finishedSession}
+            onSave={handleSaveReflection}
+            onSkip={handleSkipReflection}
+          />
+        )}
+      </AnimatePresence>
 
-            {/* Timer circle */}
-            <div className="relative w-80 h-80 flex items-center justify-center">
-              <TimerCircle
-                progress={progress}
-                isRunning={isRunning && !isPaused}
-                isBreak={isBreak}
-              />
-              <div className="relative z-10 flex flex-col items-center">
-                <motion.span
-                  key={timeLeft}
-                  initial={{ opacity: 0.7, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className={cn(
-                    "text-7xl font-black tracking-tighter tabular-nums",
-                    isBreak ? "text-slate-400" : "text-slate-900",
-                  )}
-                >
-                  {formatTime(timeLeft)}
-                </motion.span>
-                {isBreak && (
-                  <span className="mt-2 flex items-center gap-1.5 text-sm text-slate-400">
-                    <Coffee className="h-4 w-4" /> Dam olish
-                  </span>
-                )}
-              </div>
-            </div>
+      {/* ── NORMAL VIEW ── */}
+      <div className="min-h-screen bg-zinc-50">
+        <div className="max-w-2xl mx-auto px-4 py-6 pb-24 space-y-5">
 
-            {/* Current task */}
-            {currentTask && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-sm text-slate-500 max-w-xs text-center truncate"
-              >
-                {currentTask}
-              </motion.p>
-            )}
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest">SYSTEM</p>
+            <h1 className="text-2xl font-black text-zinc-900 tracking-tight mt-0.5">Deep Work</h1>
+            <p className="text-xs text-zinc-400 mt-0.5">Har bir sessiya — identitingizga ovoz berish</p>
+          </motion.div>
 
-            {/* Controls */}
-            <div className="flex items-center gap-4">
-              {isPaused ? (
-                <Button
-                  onClick={handleStart}
-                  className="h-14 w-14 rounded-full bg-slate-900 hover:bg-slate-800 text-white shadow-lg"
-                >
-                  <Play className="h-6 w-6" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={handlePause}
-                  className="h-14 w-14 rounded-full bg-slate-900 hover:bg-slate-800 text-white shadow-lg"
-                >
-                  <Pause className="h-6 w-6" />
-                </Button>
-              )}
-              <Button
-                onClick={handleReset}
-                variant="outline"
-                className="h-14 w-14 rounded-full border-slate-200 text-slate-500 hover:bg-slate-50"
-              >
-                <RotateCcw className="h-5 w-5" />
-              </Button>
-              <Button
-                onClick={() => setIsFocusMode(false)}
-                variant="outline"
-                className="h-14 w-14 rounded-full border-slate-200 text-slate-500 hover:bg-slate-50"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
+          {/* Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <StatCard icon={Clock}     label="Bugungi vaqt"  value={`${todayMins}m`} />
+            <StatCard icon={Zap}       label="Sessiyalar"    value={todaySessions.length} sub="bugun" />
+            <StatCard icon={Flame}     label="Streak"        value={`${streak}k`} sub="ketma-ket kun" />
+            <StatCard icon={Brain}     label="DW Score"      value={deepWorkScore} sub="oxirgi 7 kun" />
           </div>
 
-          {/* Session complete overlay */}
-          <AnimatePresence>
-            {showComplete && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="absolute inset-0 z-20 flex items-center justify-center bg-white/90 backdrop-blur-sm"
-              >
-                <div className="flex flex-col items-center gap-4">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                    className="h-20 w-20 rounded-full bg-slate-900 flex items-center justify-center"
-                  >
-                    <Check className="h-10 w-10 text-white" />
-                  </motion.div>
-                  <p className="text-2xl font-bold text-slate-900">
-                    Session tugadi!
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    Dam olish boshlanmoqda...
-                  </p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      </AnimatePresence>
-    );
-  }
-
-  // ── Normal View ──────────────────────────────────────────────────────────
-  return (
-    <div className="space-y-8">
-      {/* Header */}
-      <section>
-        <motion.h1
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900"
-        >
-          Deep Work
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="mt-1 text-sm text-slate-500"
-        >
-          Chuqur diqqat bilan ishlang
-        </motion.p>
-      </section>
-
-      {/* Stats Row */}
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          {
-            label: "Bugun",
-            value: `${todayMinutes} min`,
-            icon: Clock,
-          },
-          {
-            label: "Sessiyalar",
-            value: todaySessions.length,
-            icon: Zap,
-          },
-          {
-            label: "Haftalik",
-            value: `${weekMinutes} min`,
-            icon: Target,
-          },
-          {
-            label: "Eng yaxshi streak",
-            value: `${bestStreak} kun`,
-            icon: Brain,
-          },
-        ].map((stat, i) => (
+          {/* Session setup */}
           <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.06 * i }}
+            className="bg-white border border-zinc-200 rounded-2xl p-5 space-y-4"
           >
-            <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-2xl overflow-hidden group hover:-translate-y-1 transition-all duration-300 bg-white">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                      {stat.label}
-                    </p>
-                    <p className="mt-3 text-3xl font-extrabold tracking-tighter text-slate-900">
-                      {stat.value}
-                    </p>
-                  </div>
-                  <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center">
-                    <stat.icon className="h-5 w-5 text-slate-500" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </section>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-lg bg-zinc-100 flex items-center justify-center">
+                <Play className="w-3.5 h-3.5 text-zinc-600" strokeWidth={2.5} />
+              </div>
+              <span className="text-sm font-semibold text-zinc-900">Yangi sessiya</span>
+            </div>
 
-      {/* Session Type Selector */}
-      <section>
-        <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">
-          Sessiya turi
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {SESSION_TYPES.map((type) => {
-            const Icon = type.icon;
-            const isSelected = selectedType === type.id;
-            return (
-              <motion.button
-                key={type.id}
-                onClick={() => selectType(type.id)}
-                whileTap={{ scale: 0.97 }}
-                className={cn(
-                  "relative rounded-2xl p-5 text-left transition-all duration-200 border",
-                  isSelected
-                    ? "bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-900/20"
-                    : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:shadow-md",
-                )}
-              >
-                <Icon
+            <div className="space-y-2.5">
+              <input
+                value={setupTask}
+                onChange={e => setSetupTask(e.target.value)}
+                placeholder="Nima ustida ishlaysiz?"
+                className="w-full text-sm bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-300 font-medium"
+              />
+              <input
+                value={setupGoal}
+                onChange={e => setSetupGoal(e.target.value)}
+                placeholder="Bu sessiyaning maqsadi nima?"
+                className="w-full text-sm bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-zinc-400 transition-colors placeholder:text-zinc-300"
+              />
+            </div>
+
+            {/* Duration */}
+            <div className="flex gap-2">
+              {DURATIONS.map(d => (
+                <button
+                  key={d.value}
+                  onClick={() => setSetupDuration(d.value)}
                   className={cn(
-                    "h-5 w-5 mb-3",
-                    isSelected ? "text-slate-300" : "text-slate-400",
-                  )}
-                />
-                <p className="font-bold text-sm">{type.label}</p>
-                <p
-                  className={cn(
-                    "text-xs mt-1",
-                    isSelected ? "text-slate-400" : "text-slate-400",
+                    "flex-1 py-3 rounded-xl border-2 text-center transition-all",
+                    setupDuration === d.value
+                      ? "border-zinc-900 bg-zinc-900 text-white"
+                      : "border-zinc-200 text-zinc-600 hover:border-zinc-400"
                   )}
                 >
-                  {type.id === "custom"
-                    ? `${customWork}/${customRest} min`
-                    : `${type.work}/${type.rest} min`}
-                </p>
-              </motion.button>
-            );
-          })}
-        </div>
+                  <p className="text-sm font-bold">{d.label}</p>
+                  <p className={cn("text-[10px] mt-0.5", setupDuration === d.value ? "text-zinc-400" : "text-zinc-400")}>{d.desc}</p>
+                </button>
+              ))}
+            </div>
 
-        {/* Custom inputs */}
-        <AnimatePresence>
-          {selectedType === "custom" && !isRunning && (
+            {/* Start buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setupTask.trim() && startSession({ task: setupTask.trim(), goal: setupGoal.trim(), duration: setupDuration })}
+                disabled={!setupTask.trim()}
+                className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-zinc-900 text-white rounded-xl font-semibold text-sm hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <Play className="w-4 h-4" />
+                Sessiyani boshlash
+              </button>
+              <button
+                onClick={addPlan}
+                disabled={!setupTask.trim()}
+                className="px-4 py-3.5 border border-zinc-200 text-zinc-600 rounded-xl text-sm hover:border-zinc-400 disabled:opacity-40 transition-colors"
+                title="Rejaga qo'shish"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+
+          {/* Focus plan */}
+          {plans.length > 0 && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-2"
             >
-              <div className="flex gap-4 mt-4">
-                <div className="flex-1">
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">
-                    Ish (min)
-                  </label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={180}
-                    value={customWork}
-                    onChange={(e) => {
-                      const v = Math.max(1, Math.min(180, +e.target.value || 1));
-                      setCustomWork(v);
-                      setTimeLeft(v * 60);
-                    }}
-                    className="rounded-xl border-slate-200"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">
-                    Dam olish (min)
-                  </label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={60}
-                    value={customRest}
-                    onChange={(e) => {
-                      setCustomRest(
-                        Math.max(1, Math.min(60, +e.target.value || 1)),
-                      );
-                    }}
-                    className="rounded-xl border-slate-200"
-                  />
-                </div>
-              </div>
+              <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider px-1">
+                Bugungi reja · {plans.length} ta sessiya
+              </p>
+              <AnimatePresence mode="popLayout">
+                {plans.map(plan => (
+                  <PlanCard key={plan.id} plan={plan} onStart={startFromPlan} onDelete={deletePlan} />
+                ))}
+              </AnimatePresence>
             </motion.div>
           )}
-        </AnimatePresence>
-      </section>
 
-      {/* Timer + Task Section */}
-      <section className="grid gap-6 lg:grid-cols-5">
-        {/* Timer */}
-        <Card className="lg:col-span-3 border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-2xl overflow-hidden bg-white">
-          <CardContent className="p-8 flex flex-col items-center">
-            {/* Timer circle */}
-            <div className="relative w-80 h-80 flex items-center justify-center mb-8">
-              <TimerCircle
-                progress={progress}
-                isRunning={isRunning && !isPaused}
-                isBreak={isBreak}
-              />
-              <div className="relative z-10 flex flex-col items-center">
-                <span
+          {/* Tabs */}
+          <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden">
+            <div className="flex border-b border-zinc-100">
+              {[
+                { key: "today",     label: "Bugun" },
+                { key: "analytics", label: "Tahlil" },
+                { key: "ai",        label: "AI Coach" },
+              ].map(t => (
+                <button
+                  key={t.key}
+                  onClick={() => setTab(t.key)}
                   className={cn(
-                    "text-6xl font-black tracking-tighter tabular-nums",
-                    isBreak ? "text-slate-400" : "text-slate-900",
+                    "flex-1 py-3 text-sm font-semibold transition-colors",
+                    tab === t.key ? "text-zinc-900 border-b-2 border-zinc-900 -mb-px" : "text-zinc-400 hover:text-zinc-700"
                   )}
                 >
-                  {formatTime(timeLeft)}
-                </span>
-                {isBreak && (
-                  <span className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
-                    <Coffee className="h-3.5 w-3.5" /> Dam olish
-                  </span>
-                )}
-                {isRunning && !isBreak && (
-                  <span className="mt-2 text-xs text-slate-400">
-                    Ish sessiyasi
-                  </span>
-                )}
-              </div>
+                  {t.label}
+                </button>
+              ))}
             </div>
 
-            {/* Controls */}
-            <div className="flex items-center gap-3">
-              {!isRunning ? (
-                <Button
-                  onClick={handleStart}
-                  className="h-12 px-8 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-semibold shadow-lg shadow-slate-900/20"
-                >
-                  <Play className="h-5 w-5 mr-2" />
-                  Boshlash
-                </Button>
-              ) : isPaused ? (
-                <Button
-                  onClick={handleStart}
-                  className="h-12 px-8 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-semibold shadow-lg shadow-slate-900/20"
-                >
-                  <Play className="h-5 w-5 mr-2" />
-                  Davom etish
-                </Button>
-              ) : (
-                <Button
-                  onClick={handlePause}
-                  className="h-12 px-8 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-semibold shadow-lg shadow-slate-900/20"
-                >
-                  <Pause className="h-5 w-5 mr-2" />
-                  To'xtatish
-                </Button>
+            <div className="p-5">
+              {/* Today's sessions */}
+              {tab === "today" && (
+                <div className="space-y-2">
+                  {todaySessions.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Timer className="w-8 h-8 text-zinc-300 mx-auto mb-2" />
+                      <p className="text-sm text-zinc-400">Hali sessiya yo'q. Birinchi sessiyani boshlang!</p>
+                    </div>
+                  ) : (
+                    todaySessions.map(session => (
+                      <SessionRow key={session.id} session={session} />
+                    ))
+                  )}
+                </div>
               )}
-              <Button
-                onClick={handleReset}
-                variant="outline"
-                className="h-12 w-12 rounded-full border-slate-200 text-slate-500 hover:bg-slate-50"
-              >
-                <RotateCcw className="h-5 w-5" />
-              </Button>
+
+              {/* Analytics */}
+              {tab === "analytics" && (
+                <div className="space-y-6">
+                  <WeeklyChart sessions={sessions} />
+                  <div className="border-t border-zinc-100 pt-5">
+                    <BestHours sessions={sessions} />
+                  </div>
+                  <div className="border-t border-zinc-100 pt-5">
+                    <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+                      Sessiya sifati
+                    </p>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { label: "O'rta muddati", value: `${Math.round(sessions.reduce((s, e) => s + e.duration, 0) / Math.max(sessions.length, 1))}m` },
+                        { label: "Maqsad %",       value: `${Math.round(sessions.filter(s => s.goalCompleted).length / Math.max(sessions.length, 1) * 100)}%` },
+                        { label: "O'rt. diqqat",   value: `${(sessions.filter(s => s.focusRating).reduce((s, e, _, a) => s + e.focusRating / a.length, 0)).toFixed(1)}/5` },
+                      ].map(item => (
+                        <div key={item.label} className="bg-zinc-50 rounded-xl p-3 text-center">
+                          <p className="text-lg font-black text-zinc-900">{item.value}</p>
+                          <p className="text-[10px] text-zinc-400 mt-0.5">{item.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* AI Coach */}
+              {tab === "ai" && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="w-4 h-4 text-zinc-500" />
+                    <p className="text-sm font-semibold text-zinc-700">Shaxsiy tahlil</p>
+                  </div>
+                  {AI_INSIGHTS.map(insight => {
+                    const Icon = insight.icon;
+                    return (
+                      <div key={insight.title} className="flex gap-3 p-3 bg-zinc-50 rounded-xl">
+                        <div className="w-7 h-7 rounded-lg bg-white border border-zinc-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Icon className="w-3.5 h-3.5 text-zinc-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-zinc-800 mb-0.5">{insight.title}</p>
+                          <p className="text-xs text-zinc-500 leading-relaxed">{insight.body}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="border-t border-zinc-100 pt-4">
+                    <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+                      Tavsiyalar
+                    </p>
+                    <div className="space-y-2.5">
+                      {AI_SUGGESTIONS.map((s, i) => (
+                        <div key={i} className="flex items-start gap-2.5">
+                          <div className="w-5 h-5 rounded-full bg-zinc-900 text-white flex items-center justify-center flex-shrink-0 text-[10px] font-bold mt-0.5">
+                            {i + 1}
+                          </div>
+                          <p className="text-xs text-zinc-600 leading-relaxed">{s}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Task + Info side panel */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          {/* Current task */}
-          <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-2xl overflow-hidden bg-white">
-            <CardContent className="p-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">
-                Nima ustida ishlayapsiz?
-              </h3>
-              <Input
-                placeholder="Masalan: API integratsiya..."
-                value={currentTask}
-                onChange={(e) => setCurrentTask(e.target.value)}
-                disabled={isRunning && !isPaused}
-                className="rounded-xl border-slate-200 text-slate-800 placeholder:text-slate-300"
-              />
-            </CardContent>
-          </Card>
-
-          {/* Session info */}
-          <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-2xl overflow-hidden bg-white flex-1">
-            <CardContent className="p-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">
-                Sessiya ma'lumotlari
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">Turi</span>
-                  <span className="font-semibold text-slate-800">
-                    {activePreset.label}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">Ish vaqti</span>
-                  <span className="font-semibold text-slate-800">
-                    {workMinutes} min
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">Dam olish</span>
-                  <span className="font-semibold text-slate-800">
-                    {restMinutes} min
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">Holat</span>
-                  <span
-                    className={cn(
-                      "font-semibold",
-                      isRunning
-                        ? isPaused
-                          ? "text-slate-500"
-                          : "text-slate-900"
-                        : "text-slate-400",
-                    )}
-                  >
-                    {isRunning
-                      ? isPaused
-                        ? "Pauza"
-                        : isBreak
-                          ? "Dam olish"
-                          : "Ishlayapti"
-                      : "Kutilmoqda"}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* Session Log */}
-      <section>
-        <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">
-          Bugungi sessiyalar
-        </h2>
-        {todaySessions.length === 0 ? (
-          <Card className="border-0 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 rounded-2xl overflow-hidden bg-white">
-            <CardContent className="p-8 text-center">
-              <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                <Timer className="h-6 w-6 text-slate-400" />
-              </div>
-              <p className="text-sm text-slate-400">
-                Hali sessiya yo'q. Birinchi sessiyani boshlang!
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {todaySessions.map((session, i) => (
-              <motion.div
-                key={session.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.04 * i }}
-              >
-                <Card className="border-0 shadow-lg shadow-slate-200/30 ring-1 ring-slate-100 rounded-2xl overflow-hidden bg-white hover:-translate-y-0.5 transition-all duration-200">
-                  <CardContent className="p-5 flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-slate-900 flex items-center justify-center flex-shrink-0">
-                      <Check className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-slate-800 truncate">
-                        {session.task}
-                      </p>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        {session.duration} min &middot; {session.time}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
           </div>
-        )}
-      </section>
-    </div>
+
+          <div className="h-4" />
+        </div>
+      </div>
+    </>
   );
 }
