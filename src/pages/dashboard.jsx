@@ -103,7 +103,6 @@ function CircularScore({ score, size = 110, strokeWidth = 7 }) {
         <span className="text-2xl font-bold text-zinc-900 tabular-nums">{score}</span>
         <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">ball</span>
       </div>
-      {action && action}
     </div>
   );
 }
