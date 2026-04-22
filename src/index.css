@@ -5,8 +5,8 @@
 }
 
 :root {
-  background-color: #F5F5F4;
-  color: #1a1a1a;
+  background-color: #F8FAFC;
+  color: #111827;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -23,19 +23,15 @@ body {
   padding: 0;
   font-family: var(--font-sans);
   min-height: 100%;
-  background-color: #F5F5F4;
+  background-color: #F8FAFC;
 }
 
 ::selection {
-  background-color: #7C3AED;
+  background-color: #6366F1;
   color: #fff;
 }
 
-<<<<<<< HEAD
-/* Custom Scrollbar */
-=======
 /* Scrollbar */
->>>>>>> a982465 (man life os loyihasini hamma modullarini ozgartirdm)
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -44,144 +40,37 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D1D5DB;
+  background: #E2E8F0;
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #9CA3AF;
+  background: #CBD5E1;
 }
 
-<<<<<<< HEAD
-/* Hide scrollbar for sidebar */
-.sidebar-scroll {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.sidebar-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-/* No scrollbar utility */
-=======
 /* Hide scrollbar for sidebar & overflow navs */
 .sidebar-scroll,
->>>>>>> a982465 (man life os loyihasini hamma modullarini ozgartirdm)
 .no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-<<<<<<< HEAD
-=======
 .sidebar-scroll::-webkit-scrollbar,
->>>>>>> a982465 (man life os loyihasini hamma modullarini ozgartirdm)
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 
-<<<<<<< HEAD
-/* Card styles */
-.notion-card {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.07);
-  border-radius: 10px;
-}
-
-/* Subtle shadow */
+/* Soft shadows */
 .shadow-soft {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
 }
-
 .shadow-medium {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-/* Glassmorphism */
-=======
-/* Glassmorphism helpers */
->>>>>>> a982465 (man life os loyihasini hamma modullarini ozgartirdm)
-.glass-light {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-<<<<<<< HEAD
-/* Legacy premium shadow */
-=======
-/* Legacy shadow util */
->>>>>>> a982465 (man life os loyihasini hamma modullarini ozgartirdm)
-.shadow-premium {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
-<<<<<<< HEAD
-/* Animated gradient for greeting */
-@keyframes gradient-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.gradient-animated {
-  background-size: 200% 200%;
-  animation: gradient-shift 6s ease infinite;
-}
-
-/* Sidebar active left border indicator */
-.nav-active-indicator {
-  position: relative;
-}
-.nav-active-indicator::before {
-  content: '';
-  position: absolute;
-  left: -8px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 60%;
-  border-radius: 2px;
-  background: currentColor;
-}
-
-/* Smooth page transitions */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.page-enter {
-  animation: fadeInUp 0.2s ease-out;
-}
-
-/* Checkbox animation */
-@keyframes check-pop {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
-}
-
-.check-animate {
-  animation: check-pop 0.2s ease;
-}
-
-/* Progress bar shimmer */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-=======
 /* Page fade-in animation */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .page-enter {
-  animation: fadeInUp 0.2s ease-out;
->>>>>>> a982465 (man life os loyihasini hamma modullarini ozgartirdm)
+  animation: fadeInUp 0.22s ease-out;
 }
