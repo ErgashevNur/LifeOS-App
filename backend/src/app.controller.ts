@@ -13,12 +13,7 @@ import {
   UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
-import {
-  ApiBody,
-  ApiConsumes,
-  ApiOperation,
-  ApiTags,
-} from "@nestjs/swagger";
+import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { mkdirSync } from "node:fs";
 import * as path from "node:path";
 import { diskStorage } from "multer";
@@ -49,7 +44,9 @@ import {
 } from "./dto";
 import { AccessTokenPayload } from "./types";
 
-const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+const UPLOAD_DIR = process.env.VERCEL
+  ? "/tmp/lifeos-uploads"
+  : path.join(process.cwd(), "uploads");
 const ALLOWED_UPLOAD_MIME_TYPES: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
@@ -252,7 +249,9 @@ export class AppController {
   @Public()
   @Post("auth/register")
   @ApiTags("Auth")
-  @ApiOperation({ summary: "Register new user and return access/refresh tokens" })
+  @ApiOperation({
+    summary: "Register new user and return access/refresh tokens",
+  })
   @ApiSuccess({ message: "Foydalanuvchi ro'yxatdan o'tdi.", status: 201 })
   register(@Body() dto: RegisterDto) {
     return this.appService.register(dto);
@@ -399,7 +398,11 @@ export class AppController {
   @Post("goals")
   @ApiTags("Goals")
   @ApiOperation({ summary: "Create goal" })
-  @ApiSuccess({ message: "Maqsad muvaffaqiyatli yaratildi.", status: 201, auth: true })
+  @ApiSuccess({
+    message: "Maqsad muvaffaqiyatli yaratildi.",
+    status: 201,
+    auth: true,
+  })
   addGoal(@Body() dto: CreateGoalDto) {
     return this.appService.addGoal(dto);
   }
@@ -408,7 +411,10 @@ export class AppController {
   @ApiTags("Goals")
   @ApiOperation({ summary: "Update goal progress by delta" })
   @ApiSuccess({ message: "Maqsad progressi yangilandi.", auth: true })
-  updateGoalProgress(@Param("id") id: string, @Body() dto: UpdateGoalProgressDto) {
+  updateGoalProgress(
+    @Param("id") id: string,
+    @Body() dto: UpdateGoalProgressDto,
+  ) {
     return this.appService.updateGoalProgress(id, dto);
   }
 
@@ -665,7 +671,11 @@ export class AppController {
       required: ["image"],
     },
   })
-  @ApiSuccess({ message: "Rasm muvaffaqiyatli yuklandi.", status: 201, auth: true })
+  @ApiSuccess({
+    message: "Rasm muvaffaqiyatli yuklandi.",
+    status: 201,
+    auth: true,
+  })
   @UseInterceptors(
     FileInterceptor("image", {
       storage: diskStorage({

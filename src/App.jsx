@@ -16,7 +16,6 @@ const SettingsPage = lazy(() => import("./pages/settings-page.jsx"));
 const UsersPage = lazy(() => import("./pages/users-page.jsx"));
 const DailyPlannerPage = lazy(() => import("./pages/daily-planner-page.jsx"));
 const FocusPage = lazy(() => import("./pages/focus-page.jsx"));
-const ReflectionPage = lazy(() => import("./pages/reflection-page.jsx"));
 const NotFoundPage = lazy(() => import("./pages/not-found-page.jsx"));
 const ErrorPage = lazy(() => import("./pages/error-page.jsx"));
 
@@ -110,14 +109,7 @@ const router = createBrowserRouter([
               </Suspense>
             ),
           },
-          {
-            path: "reflection",
-            element: (
-              <Suspense fallback={<PageLoader />}>
-                <ReflectionPage />
-              </Suspense>
-            ),
-          },
+
           {
             path: "assistant",
             element: (

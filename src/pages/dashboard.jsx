@@ -39,6 +39,21 @@ function getGreeting() {
   return "Xayrli kech";
 }
 
+function formatDate() {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+const stagger = (i = 0, base = 0.05) => ({
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: base * i },
+});
+
 /* ─────────────────────────────────────────────────────────────────────────────
    UI Primitives
 ───────────────────────────────────────────────────────────────────────────── */
@@ -54,7 +69,7 @@ function Card({ children, className, ...rest }) {
       {...rest}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }
 
@@ -89,7 +104,7 @@ function CardHeader({ title, subtitle, icon: Icon, to, action }) {
   );
 }
 
-function ProgressBar({ value, className }) {
+function ProgressBar({ value, color = "#4F46E5", className }) {
   return (
     <div
       className={cn(
@@ -107,13 +122,41 @@ function ProgressBar({ value, className }) {
   );
 }
 
-function CircularScore({ score, size = 110, strokeWidth = 7 }) {
+function Checkbox({ checked, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "w-[18px] h-[18px] rounded-[5px] border flex items-center justify-center transition-all flex-shrink-0 cursor-pointer",
+        checked
+          ? "bg-[#6366F1] border-[#4F46E5]"
+          : "border-slate-200 hover:border-[#6366F1]/60 bg-transparent"
+      )}
+    >
+      {checked && (
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 500, damping: 25 }}
+        >
+          <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+        </motion.div>
+      )}
+    </button>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Circular Day Score
+   ───────────────────────────────────────────────────────────────────────────── */
+function CircularScore({ score, size = 96, strokeWidth = 6 }) {
   const r = (size - strokeWidth) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (score / 100) * circ;
+  const color = score >= 80 ? "#22C55E" : score >= 50 ? "#6366F1" : "#F59E0B";
 
   return (
-    <div className="relative" style={{ width: size, height: size }}>
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
         <circle
           cx={size / 2}
@@ -164,6 +207,7 @@ function Checkbox({ checked, onClick }) {
 ───────────────────────────────────────────────────────────────────────────── */
 export default function DashboardPage() {
   const { data, actions, selectors, dashboardSummary } = useLifeOSData();
+  const navigate = useNavigate();
   const session = getAuthSession();
 
   const [newTask, setNewTask] = useState("");
@@ -214,7 +258,7 @@ export default function DashboardPage() {
     s += Math.min(20, Math.round(focusMin / 3));
     if (hasReflection) s += 10;
     return Math.min(100, s);
-  }, [taskPct, habitPct, focusMin, hasReflection]);
+  }, [taskPct, habitPct, focusMinToday, healthPct]);
 
   const handleAddTask = () => {
     if (!newTask.trim()) return;

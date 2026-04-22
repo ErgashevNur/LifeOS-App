@@ -28,6 +28,7 @@ backend/data/db.json
 .env
 .env.*
 !.env.example
+!.env.production
 
 backend/.env
 backend/.env.*
@@ -53,3 +54,4 @@ backend/.env.*
 *.njsproj
 *.sln
 *.sw?
+.vercel

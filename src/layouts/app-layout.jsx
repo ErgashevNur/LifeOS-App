@@ -20,25 +20,28 @@ import { Navigate, Outlet, useLocation, useNavigate, NavLink } from "react-route
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Navigation config
+   ───────────────────────────────────────────────────────────────────────────── */
 const NAV_ITEMS = [
-  { to: "/dashboard",  label: "Dashboard",    icon: LayoutDashboard, color: "#64748B" },
-  { to: "/planner",    label: "Kun rejasi",   icon: Calendar,        color: "#64748B" },
-  { to: "/goals",      label: "Maqsadlar",    icon: Target,          color: "#64748B" },
-  { to: "/habits",     label: "Odatlar",      icon: Repeat,          color: "#64748B" },
-  { to: "/focus",      label: "Deep Work",    icon: Zap,             color: "#64748B" },
-  { to: "/reflection", label: "Refleksiya",   icon: Brain,           color: "#64748B" },
-  { to: "/assistant",  label: "AI Murabbiy",  icon: Bot,             color: "#64748B" },
-  { to: "/settings",   label: "Sozlamalar",   icon: Settings,        color: "#64748B" },
+  { to: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
+  { to: "/planner",    label: "Planner",    icon: Calendar },
+  { to: "/goals",      label: "Goals",      icon: Target },
+  { to: "/habits",     label: "Habits",     icon: Repeat },
+  { to: "/focus",      label: "Deep Work",  icon: Zap },
+  { to: "/reflection", label: "Reflection", icon: Brain },
+  { to: "/assistant",  label: "AI Coach",   icon: Bot },
+  { to: "/settings",   label: "Settings",   icon: Settings },
 ];
 
-const ADMIN_ITEM = { to: "/users", label: "Foydalanuvchilar", icon: Shield, color: "#EF4444" };
+const ADMIN_ITEM = { to: "/users", label: "Users", icon: Shield };
 
 const BOTTOM_TABS = [
-  { to: "/dashboard", label: "Home",     icon: LayoutDashboard, color: "#334155" },
-  { to: "/planner",   label: "Reja",     icon: Calendar,        color: "#334155" },
-  { to: "/focus",     label: "Fokus",    icon: Zap,             color: "#334155" },
-  { to: "/assistant", label: "Coach",    icon: Bot,             color: "#334155" },
-  { to: "/settings",  label: "Sozlama",  icon: Settings,        color: "#64748B" },
+  { to: "/dashboard", label: "Home",    icon: LayoutDashboard },
+  { to: "/planner",   label: "Planner", icon: Calendar },
+  { to: "/focus",     label: "Focus",   icon: Zap },
+  { to: "/assistant", label: "Coach",   icon: Bot },
+  { to: "/settings",  label: "Settings",icon: Settings },
 ];
 
 function isActive(current, target) {
@@ -61,7 +64,7 @@ function SidebarContent({ navItems, location, session, handleLogout, onNavClick 
         <div className="w-6 h-6 rounded-[7px] bg-violet-600 flex items-center justify-center flex-shrink-0">
           <Zap className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
         </div>
-        <span className="text-white font-bold text-[15px] tracking-tight">LifeOS</span>
+        <span className="text-[#111827] font-bold text-[15px] tracking-tight">LifeOS</span>
       </div>
 
       {/* User */}
@@ -71,8 +74,8 @@ function SidebarContent({ navItems, location, session, handleLogout, onNavClick 
             {initials}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white/90 text-[13px] font-semibold leading-tight truncate">
-              {session?.firstName ?? "User"}'s Workspace
+            <p className="text-[#111827] text-[13px] font-semibold leading-tight truncate">
+              {session?.firstName ?? "User"}&apos;s Life OS
             </p>
             <p className="text-white/35 text-[11px] mt-0.5">
               {session?.role === "admin" ? "Admin" : "Free Plan"}
@@ -98,10 +101,9 @@ function SidebarContent({ navItems, location, session, handleLogout, onNavClick 
               )}>
                 <Icon
                   className="w-4 h-4 flex-shrink-0 transition-colors"
-                  style={{ color: active ? color : undefined }}
-                  strokeWidth={active ? 2 : 1.75}
+                  strokeWidth={active ? 2.2 : 1.8}
                 />
-                <span className="font-medium truncate flex-1">{label}</span>
+                <span className={cn("font-medium truncate flex-1", active && "font-semibold")}>{label}</span>
                 {active && (
                   <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
                 )}
@@ -115,16 +117,19 @@ function SidebarContent({ navItems, location, session, handleLogout, onNavClick 
       <div className="p-2.5 border-t border-white/[0.07] flex-shrink-0">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-[7px] text-white/35 hover:bg-red-500/10 hover:text-red-400 transition-all text-[13px] font-medium"
+          className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-[#9CA3AF] hover:bg-red-50 hover:text-red-500 transition-all text-[13px] font-medium"
         >
           <LogOut className="w-4 h-4 flex-shrink-0" strokeWidth={1.75} />
-          Chiqish
+          Sign out
         </button>
       </div>
     </>
   );
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   App Layout
+   ───────────────────────────────────────────────────────────────────────────── */
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -144,7 +149,7 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-[#F5F5F4] overflow-hidden">
+    <div className="flex h-screen bg-[#F8FAFC] overflow-hidden">
 
       {/* ── Desktop Sidebar ── */}
       <aside className="hidden lg:flex w-[220px] flex-shrink-0 bg-[#191919] flex-col h-full border-r border-white/[0.04]">
@@ -176,7 +181,7 @@ export default function AppLayout() {
               animate={{ x: 0 }}
               exit={{ x: -220 }}
               transition={{ type: "spring", damping: 28, stiffness: 320 }}
-              className="fixed left-0 top-0 h-full w-[220px] bg-[#191919] flex flex-col z-50 lg:hidden border-r border-white/[0.04]"
+              className="fixed left-0 top-0 h-full w-[220px] bg-white flex flex-col z-50 lg:hidden border-r border-slate-100"
             >
               <button
                 onClick={() => setMobileMenuOpen(false)}
@@ -236,24 +241,24 @@ export default function AppLayout() {
           </div>
 
           {/* Avatar */}
-          <div
+          <button
             onClick={() => navigate("/settings")}
-            className="w-7 h-7 rounded-full bg-slate-600 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity shadow-sm"
+            className="w-8 h-8 rounded-full bg-[#6366F1]/10 border border-[#6366F1]/15 flex items-center justify-center text-[#6366F1] text-[11px] font-bold flex-shrink-0 cursor-pointer hover:bg-[#6366F1]/15 transition-colors"
           >
             {getInitials(session)}
-          </div>
+          </button>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-[1400px]">
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto bg-[#F8FAFC]">
+          <div className="max-w-[1400px] page-enter">
             <Outlet />
           </div>
         </main>
 
         {/* ── Mobile bottom tabs ── */}
-        <nav className="lg:hidden flex h-14 border-t border-black/[0.06] bg-white/90 backdrop-blur-md flex-shrink-0">
-          {BOTTOM_TABS.map(({ to, label, icon: Icon, color }) => {
+        <nav className="lg:hidden flex h-14 border-t border-slate-100 bg-white flex-shrink-0">
+          {BOTTOM_TABS.map(({ to, label, icon: Icon }) => {
             const active = isActive(location.pathname, to);
             return (
               <button
@@ -264,13 +269,13 @@ export default function AppLayout() {
                 <motion.div whileTap={{ scale: 0.85 }}>
                   <Icon
                     className="h-5 w-5 transition-colors duration-150"
-                    style={{ color: active ? color : undefined }}
-                    strokeWidth={active ? 2.5 : 1.8}
+                    style={{ color: active ? "#6366F1" : "#9CA3AF" }}
+                    strokeWidth={active ? 2.2 : 1.8}
                   />
                 </motion.div>
                 <span
-                  className="text-[10px] font-bold transition-colors duration-150"
-                  style={{ color: active ? color : "#94A3B8" }}
+                  className="text-[10px] font-semibold transition-colors duration-150"
+                  style={{ color: active ? "#6366F1" : "#9CA3AF" }}
                 >
                   {label}
                 </span>

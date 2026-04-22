@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useLifeOSData } from "@/lib/lifeos-store";
 import {
   Plus, Check, X, Clock, Flame, Target, BarChart3,
   ChevronDown, MoreHorizontal, Edit3, Trash2, Eye,
@@ -187,6 +188,39 @@ function buildHabits() {
 }
 
 const INITIAL_HABITS = buildHabits();
+
+function toUIHabit(bh) {
+  const rate = Math.min(0.95, bh.completedDays / 84);
+  const history = generateHistory(84, rate);
+  const today = new Date();
+  for (let i = 0; i < Math.min(bh.streak, 84); i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const ds = d.toISOString().slice(0, 10);
+    const idx = history.findIndex(h => h.date === ds);
+    if (idx >= 0) history[idx] = { ...history[idx], done: i > 0 ? true : bh.completedToday };
+  }
+  return {
+    id: bh.id,
+    title: bh.title,
+    streak: bh.streak,
+    longestStreak: bh.longestStreak,
+    completedDays: bh.completedDays,
+    completedToday: bh.completedToday,
+    category: "mind",
+    type: "essential",
+    frequency: "daily",
+    time: "morning",
+    difficulty: "medium",
+    identity: "I am a disciplined person",
+    cue: "",
+    reward: "",
+    recoveryMode: false,
+    history,
+    notes: [],
+    consistency: computeConsistency(history),
+  };
+}
 
 /* ═══════════════════════════════════════════════════════════════════
    HELPERS
@@ -1467,7 +1501,23 @@ function AnalyticsTab({ habits }) {
    ═══════════════════════════════════════════════════════════════════ */
 
 export default function HabitsPage() {
-  const [habits, setHabits] = useState(INITIAL_HABITS);
+  const { data, actions: storeActions } = useLifeOSData();
+  const [habits, setHabits] = useState(() =>
+    data.habits.length > 0 ? data.habits.map(toUIHabit) : INITIAL_HABITS
+  );
+
+  useEffect(() => {
+    if (data.habits.length === 0) return;
+    setHabits(prev => {
+      const prevMap = new Map(prev.map(h => [h.id, h]));
+      return data.habits.map(bh => {
+        const ex = prevMap.get(bh.id);
+        return ex
+          ? { ...ex, streak: bh.streak, longestStreak: bh.longestStreak, completedDays: bh.completedDays, completedToday: bh.completedToday }
+          : toUIHabit(bh);
+      });
+    });
+  }, [data.habits]);
   const [activeView, setActiveView] = useState("today");
   const [gridView, setGridView] = useState(false);
   const [filterType, setFilterType] = useState("");
@@ -1478,6 +1528,7 @@ export default function HabitsPage() {
 
   /* ── Mutations ── */
   const checkIn = useCallback((id) => {
+    storeActions.toggleHabitCheckIn(id);
     setHabits(prev => prev.map(h => {
       if (h.id !== id) return h;
       const todayIdx = h.history.findIndex(e => e.date === todayStr());
@@ -1487,7 +1538,7 @@ export default function HabitsPage() {
       const newStreak = newDone ? h.streak + 1 : Math.max(0, h.streak - 1);
       return { ...h, completedToday: newDone, history: newHistory, streak: newStreak };
     }));
-  }, []);
+  }, [storeActions]);
 
   const skip = useCallback((id, reason) => {
     setHabits(prev => prev.map(h => {
@@ -1504,6 +1555,7 @@ export default function HabitsPage() {
       setHabits(prev => prev.map(h => h.id === editHabit.id ? { ...h, ...formData } : h));
       setEditHabit(null);
     } else {
+      storeActions.addHabit(formData.title || formData.name || "Yangi odat");
       const history = generateHistory(84, 0);
       const newHabit = {
         id: uid(), ...formData,
@@ -1513,12 +1565,13 @@ export default function HabitsPage() {
       };
       setHabits(prev => [newHabit, ...prev]);
     }
-  }, [editHabit]);
+  }, [editHabit, storeActions]);
 
   const deleteHabit = useCallback((id) => {
+    storeActions.removeHabit(id);
     setHabits(prev => prev.filter(h => h.id !== id));
     if (detailId === id) setDetailId(null);
-  }, [detailId]);
+  }, [detailId, storeActions]);
 
   const updateHabit = useCallback((id, updates) => {
     setHabits(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h));

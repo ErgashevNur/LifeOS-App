@@ -10,6 +10,7 @@ import {
   isAuthenticated,
   loginUser,
   loginWithGoogle,
+  registerWithGoogle,
   registerUser,
   saveAuthSession,
 } from "@/lib/auth";
