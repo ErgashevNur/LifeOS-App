@@ -10,6 +10,7 @@ import {
   isAuthenticated,
   loginUser,
   loginWithGoogle,
+  registerWithGoogle,
   registerUser,
   saveAuthSession,
 } from "@/lib/auth";
@@ -174,7 +175,9 @@ export default function AuthPage() {
     }
 
     setIsLoading(true);
-    const result = await loginWithGoogle(idToken);
+    const result = tab === "register"
+      ? await registerWithGoogle(idToken)
+      : await loginWithGoogle(idToken);
     if (!result.ok) {
       setIsLoading(false);
       toast({

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useLifeOSData } from "@/lib/lifeos-store";
@@ -101,6 +101,10 @@ export default function SettingsPage() {
   const [avatarUrl, setAvatarUrl] = useState("");
 
   const notifs = data.settings.notifications;
+
+  useEffect(() => {
+    void actions.refreshMyProfile();
+  }, []);
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];

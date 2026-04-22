@@ -8,6 +8,9 @@ import {
   registerUser,
   clearAuthSession,
   loginWithGoogle,
+  getMyProfile,
+  saveAuthSession,
+  getAuthSession,
 } from "@/lib/auth";
 
 const INITIAL_DATA = {
@@ -529,6 +532,13 @@ export function LifeOSDataProvider({ children }) {
           ...prev,
           adminUsers: Array.isArray(payload) ? payload : [],
         })),
+      async refreshMyProfile() {
+        const user = await getMyProfile();
+        if (!user) return;
+        const current = getAuthSession();
+        if (!current) return;
+        saveAuthSession({ ...current, user });
+      },
       refreshDashboardSummary: () => refreshDashboardSummary(data),
 
       addDashboardTask(title) {
