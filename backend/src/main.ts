@@ -186,9 +186,10 @@ async function bootstrap() {
     }),
   );
 
-  app.useStaticAssets(path.join(process.cwd(), "uploads"), {
-    prefix: "/uploads/",
-  });
+  const uploadsDir = process.env.VERCEL
+    ? "/tmp/lifeos-uploads"
+    : path.join(process.cwd(), "uploads");
+  app.useStaticAssets(uploadsDir, { prefix: "/uploads/" });
 
   app.enableCors({
     origin: parseCorsOrigins(),

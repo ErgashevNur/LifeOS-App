@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useLifeOSData } from "@/lib/lifeos-store";
 import {
   Play, Pause, Square, Plus, Check, X, Clock, Flame,
   Target, Zap, Brain, BarChart3, MoreHorizontal,
@@ -688,6 +689,8 @@ function SessionRow({ session }) {
    ═══════════════════════════════════════════════════════════════════ */
 
 export default function FocusPage() {
+  const { data, actions: storeActions } = useLifeOSData();
+
   /* — Completed sessions — */
   const [sessions, setSessions] = useState(SEED_SESSIONS);
 
@@ -804,14 +807,24 @@ export default function FocusPage() {
       ...reflection,
     };
     setSessions(prev => [completed, ...prev]);
+
+    // Backend ga saqlash
+    const skills = data.mastery?.skills || [];
+    const skill = skills[0];
+    if (skill) {
+      storeActions.addFocusSession({ skillId: skill.id, minutes: finishedSession.duration });
+    } else {
+      // Skill yo'q bo'lsa "Deep Work" skill yaratib, keyin sessiya qo'shamiz
+      storeActions.addSkill("Deep Work");
+    }
+
     setShowReflection(false);
     setFinishedSession(null);
     setActiveSession(null);
-    // Remove from plans if it came from a plan
     if (finishedSession.planId) {
       setPlans(prev => prev.filter(p => p.id !== finishedSession.planId));
     }
-  }, [finishedSession]);
+  }, [finishedSession, data.mastery, storeActions]);
 
   const handleSkipReflection = useCallback(() => {
     const completed = {

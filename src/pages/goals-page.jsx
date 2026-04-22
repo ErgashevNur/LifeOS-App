@@ -116,6 +116,30 @@ let _goalId = Date.now();
 function uid() { return `goal_${_goalId++}`; }
 function milestoneUid() { return `ms_${_goalId++}`; }
 
+function toUIGoal(sg) {
+  const progress = sg.progress ?? Math.round((sg.currentValue / Math.max(1, sg.targetValue)) * 100);
+  return {
+    id: sg.id,
+    title: sg.title,
+    deadline: sg.deadline ? new Date(sg.deadline).toISOString().slice(0, 10) : "",
+    progress,
+    period: sg.period,
+    targetValue: sg.targetValue,
+    currentValue: sg.currentValue,
+    createdAt: sg.createdAt || new Date().toISOString(),
+    type: "outcome",
+    category: "personal",
+    priority: "medium",
+    effort: "moderate",
+    status: progress >= 100 ? "completed" : "on-track",
+    milestones: [],
+    notes: [],
+    reviews: [],
+    linkedTasks: [],
+    linkedHabits: [],
+  };
+}
+
 function daysUntil(dateStr) {
   if (!dateStr) return null;
   const diff = Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24));
@@ -1598,10 +1622,23 @@ function MonthlyReviewModal({ open, onClose, goals }) {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export default function GoalsPage() {
-  const { actions: storeActions } = useLifeOSData();
+  const { data, actions: storeActions } = useLifeOSData();
 
-  // ── Local goals state ──
-  const [goals, setGoals] = useState([]);
+  // ── Goals — synced from backend ──
+  const [goals, setGoals] = useState(() => data.goals.map(toUIGoal));
+
+  useEffect(() => {
+    setGoals(prev => {
+      const prevMap = new Map(prev.map(g => [g.id, g]));
+      return data.goals.map(sg => {
+        const existing = prevMap.get(sg.id);
+        const progress = Math.round((sg.currentValue / Math.max(1, sg.targetValue)) * 100);
+        return existing
+          ? { ...existing, progress, title: sg.title, deadline: sg.deadline ? new Date(sg.deadline).toISOString().slice(0, 10) : existing.deadline }
+          : toUIGoal(sg);
+      });
+    });
+  }, [data.goals]);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [sortBy, setSortBy] = useState("deadline-asc");
@@ -1633,8 +1670,6 @@ export default function GoalsPage() {
       createdAt: goalData.createdAt || new Date().toISOString(),
     };
     setGoals(prev => [newGoal, ...prev]);
-
-    // Also sync to store
     storeActions.addGoal({
       title: newGoal.title,
       period: newGoal.type === "outcome" ? "Oylik" : "Haftalik",
@@ -1648,8 +1683,9 @@ export default function GoalsPage() {
   }, []);
 
   const removeGoal = useCallback((id) => {
+    storeActions.removeGoal(id);
     setGoals(prev => prev.filter(g => g.id !== id));
-  }, []);
+  }, [storeActions]);
 
   const duplicateGoal = useCallback((id) => {
     setGoals(prev => {

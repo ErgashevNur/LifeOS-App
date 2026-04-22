@@ -442,12 +442,40 @@ export async function loginUser({ email, password }) {
 
 export async function loginWithGoogle(idToken) {
   try {
-    const session = await apiRequest("/auth/google", {
+    const session = await apiRequest("/auth/login/google", {
       method: "POST",
       body: JSON.stringify({ idToken }),
     });
     return { ok: true, user: session };
   } catch (error) {
     return { ok: false, message: error.message };
+  }
+}
+
+export async function registerWithGoogle(idToken) {
+  try {
+    const session = await apiRequest("/auth/register/google", {
+      method: "POST",
+      body: JSON.stringify({ idToken }),
+    });
+    return { ok: true, user: session };
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
+}
+
+export async function getMyProfile() {
+  const session = getAuthSession();
+  if (!session?.accessToken) {
+    return null;
+  }
+  try {
+    const user = await apiRequest("/auth/me", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${session.accessToken}` },
+    });
+    return user ?? null;
+  } catch {
+    return null;
   }
 }
