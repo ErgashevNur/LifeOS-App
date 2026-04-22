@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useLifeOSData } from "@/lib/lifeos-store";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
@@ -453,13 +454,24 @@ function CaptureItem({ item, onRemove }) {
    ═══════════════════════════════════════════════════════════════════ */
 
 export default function DailyPlannerPage() {
-  /* MITs */
-  const [mitTasks, setMITTasks] = useState([]);
-  const addMIT    = useCallback((task) => {
+  const { data, actions: storeActions } = useLifeOSData();
+
+  /* MITs — backend dashboard tasks bilan ulangan */
+  const [mitTasks, setMITTasks] = useState(() => data.dashboard.tasks.slice(0, 3));
+
+  useEffect(() => {
+    setMITTasks(data.dashboard.tasks.slice(0, 3));
+  }, [data.dashboard.tasks]);
+
+  const addMIT = useCallback((task) => {
     if (mitTasks.length >= 3) return;
-    setMITTasks(prev => [...prev, { id: Date.now(), done: false, ...task }]);
-  }, [mitTasks.length]);
-  const toggleMIT = useCallback(id => setMITTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t)), []);
+    storeActions.addDashboardTask(task.title || task.text || "Vazifa");
+  }, [mitTasks.length, storeActions]);
+
+  const toggleMIT = useCallback(id => {
+    storeActions.toggleDashboardTask(id);
+  }, [storeActions]);
+
   const removeMIT = useCallback(id => setMITTasks(prev => prev.filter(t => t.id !== id)), []);
 
   /* Supporting tasks */
@@ -486,9 +498,11 @@ export default function DailyPlannerPage() {
   const toggleBlock = useCallback(id => setBlocks(prev => prev.map(b => b.id === id ? { ...b, done: !b.done } : b)), []);
   const removeBlock = useCallback(id => setBlocks(prev => prev.filter(b => b.id !== id)), []);
 
-  /* Habits */
-  const [habits, setHabits] = useState(SEED_HABITS);
-  const toggleHabit = useCallback(id => setHabits(prev => prev.map(h => h.id === id ? { ...h, completedToday: !h.completedToday } : h)), []);
+  /* Habits — backend dan */
+  const habits = data.habits.length > 0 ? data.habits : SEED_HABITS;
+  const toggleHabit = useCallback(id => {
+    storeActions.toggleHabitCheckIn(id);
+  }, [storeActions]);
 
   /* Energy */
   const [energyMorning,   setEnergyMorning]   = useState(null);
