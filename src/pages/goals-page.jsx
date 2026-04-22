@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLifeOSData } from "@/lib/lifeos-store";
 import { cn } from "@/lib/utils";
@@ -289,6 +290,7 @@ function EmptyState({ icon: Icon, title, desc, action }) {
       <p className="text-sm font-semibold text-zinc-700">{title}</p>
       <p className="text-xs text-zinc-400 mt-1 max-w-[280px]">{desc}</p>
       {action && <div className="mt-4">{action}</div>}
+
     </motion.div>
   );
 }
@@ -296,6 +298,9 @@ function EmptyState({ icon: Icon, title, desc, action }) {
 function Dropdown({ trigger, children, align = "right" }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+function PeriodSection({ period, goals, onDelete, onIncrement, onDecrement }) {
+  const [open, setOpen] = useState(true);
+  const color = PERIOD_COLOR[period];
 
   useEffect(() => {
     function handleClick(e) {
@@ -325,6 +330,35 @@ function Dropdown({ trigger, children, align = "right" }) {
           </motion.div>
         )}
       </AnimatePresence>
+=======
+function Badge({ children, className }) {
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide",
+      className,
+    )}>
+      {children}
+    </span>
+  );
+}
+
+function ProgressBar({ value, height = "h-[5px]", className, showLabel }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className={cn(height, "flex-1 bg-zinc-100 rounded-full overflow-hidden", className)}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className={cn("h-full rounded-full", progressColor(value))}
+        />
+      </div>
+      {showLabel && (
+        <span className="text-[11px] font-semibold text-zinc-500 tabular-nums w-8 text-right">
+          {Math.round(value)}%
+        </span>
+      )}
+
     </div>
   );
 }
@@ -465,6 +499,38 @@ function TextInput({ value, onChange, placeholder, className, ...rest }) {
     />
   );
 }
+export default function GoalsPage() {
+  const { actions, selectors } = useLifeOSData();
+  const [title, setTitle] = useState("");
+  const [period, setPeriod] = useState("Oylik");
+  const [target, setTarget] = useState("10");
+  const [deadline, setDeadline] = useState("");
+  const [showForm, setShowForm] = useState(false);
+
+  const byPeriod = useMemo(() => {
+    const map = { Yillik: [], Oylik: [], Haftalik: [], Kunlik: [] };
+    selectors.goalsWithMeta.forEach((g) => {
+      if (map[g.period]) map[g.period].push(g);
+    });
+    return map;
+  }, [selectors.goalsWithMeta]);
+
+  const total = selectors.goalsWithMeta.length;
+  const completed = selectors.goalsWithMeta.filter((g) => g.progress >= 100).length;
+
+  const addGoal = () => {
+    if (!title.trim()) return;
+    actions.addGoal({
+      title: title.trim(),
+      period,
+      targetValue: Number(target) || 10,
+      deadline: deadline || "2026-12-31",
+    });
+    setTitle("");
+    setTarget("10");
+    setDeadline("");
+    setShowForm(false);
+  };
 
 function TextArea({ value, onChange, placeholder, rows = 3, className }) {
   return (
@@ -2132,6 +2198,7 @@ export default function GoalsPage() {
         onClose={() => setReviewOpen(false)}
         goals={goals}
       />
+
     </div>
   );
 }

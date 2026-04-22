@@ -6,12 +6,21 @@ import {
   ArrowRight, Brain, Target,
   TrendingUp, Zap,
   Bot, Repeat, ChevronRight, Flame,
+  ArrowRight, BookOpen, Brain, Sparkles, Target, Trophy,
+  TrendingUp, Zap, Check, Star, Users, HeartPulse,
+  Wallet, Bot, Repeat, ChevronRight, Play, Flame,
+  LayoutDashboard as LayoutDashboardIcon,
+  Target as TargetIcon,
+  Repeat as RepeatIcon,
+  BookOpen as BookOpenIcon,
+  Trophy as TrophyIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+
 
 const MotionDiv = motion.div;
 
@@ -21,6 +30,7 @@ const INTRO_PARALLEL_DURATION_MS = 1400;
 const INTRO_HIDE_DELAY_MS = INTRO_HOLD_DELAY_MS + INTRO_PARALLEL_DURATION_MS + 120;
 
 const ICON_MAP = { Target, Brain, Zap, TrendingUp, Repeat, Bot };
+const ICON_MAP = { Target, Brain, Zap, Trophy, BookOpen, TrendingUp };
 
 // ── Feature card color themes ─────────────────────────────────────────────────
 const FEATURE_THEMES = {
@@ -44,6 +54,9 @@ export default function LandingPage() {
   const [isIntroMoving, setIsIntroMoving] = useState(false);
   const [introTargetTransform, setIntroTargetTransform] = useState({ x: 0, y: 0, scale: 1 });
   const [scrolled, setScrolled] = useState(false);
+
+  // ── Intro animation ───────────────────────────────────────────────────────
+  useEffect(() => {
   const [showLoader, setShowLoader] = useState(false);
   const [loaderIndex, setLoaderIndex] = useState(0);
   const [loaderTarget, setLoaderTarget] = useState("register");
@@ -133,6 +146,26 @@ export default function LandingPage() {
   }, []);
 
   const MODULES = [
+  const MARQUEE_ITEMS = [
+    "10,000+ Foydalanuvchi", "500K+ Maqsad", "1M+ Streak",
+    "Unumdorlik +48%", "Bepul Boshlash", "LifeOS 2.0",
+  ];
+
+  const TESTIMONIALS = [
+    { quote: "LifeOS mening kundalik hayotimni to'liq o'zgartirdi. Maqsadlarimga erishish ancha osonlashdi!", name: "Asadbek T.", role: "Tadbirkor", avatar: "A" },
+    { quote: "Odatlar va fokus taimeri bilan har kuni 3 soat ko'proq samarali ishlayapman.", name: "Malika R.", role: "Designer", avatar: "M" },
+    { quote: "Kitoblar bo'limi va AI murabbiy mening o'sishimni ikki baravarga oshirdi.", name: "Jahongir K.", role: "Dasturchi", avatar: "J" },
+  ];
+
+  const MODULES = [
+    { icon: Target,     label: "Maqsadlar",  desc: "Yillik, oylik, kunlik maqsadlarni kuzating",  color: "bg-orange-500" },
+    { icon: Repeat,     label: "Odatlar",    desc: "40 kunlik odat treker va streak tizimi",        color: "bg-emerald-500" },
+    { icon: BookOpen,   label: "Kitoblar",   desc: "O'qigan kitoblar va bilimlarni saqlang",        color: "bg-blue-500" },
+    { icon: HeartPulse, label: "Sog'liq",    desc: "Kaloriya, suv, uyqu — barchasi bir joyda",     color: "bg-rose-500" },
+    { icon: Trophy,     label: "Mahorat",    desc: "Pomodoro bilan ko'nikmalarni rivojlantiring",  color: "bg-violet-500" },
+    { icon: Wallet,     label: "Moliya",     desc: "Daromad va xarajatlarni nazorat qiling",        color: "bg-teal-500" },
+    { icon: Bot,        label: "AI Murabbiy",desc: "Shaxsiy AI coach — har doim yoningizda",        color: "bg-indigo-500" },
+    { icon: Users,      label: "Jamiyat",    desc: "Boshqalar bilan aloqa qiling va ilhom oling",   color: "bg-pink-500" },
     { icon: Target,     label: "Maqsadlar",  desc: "Yillik, oylik, kunlik maqsadlarni kuzating",  color: "bg-slate-900" },
     { icon: Repeat,     label: "Odatlar",    desc: "40 kunlik odat treker va streak tizimi",        color: "bg-slate-700" },
     { icon: Zap,        label: "Deep Work",  desc: "Pomodoro va chuqur fokus sessiyalar",           color: "bg-slate-800" },
@@ -261,10 +294,25 @@ export default function LandingPage() {
             LifeOS
           </p>
 
+
+
           {/* Right side */}
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
             <div className="w-[1px] h-4 bg-slate-200 mx-1" />
+            <Link to="/auth?tab=login">
+              <Button
+                variant="ghost"
+                className="rounded-full px-5 h-9 text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              >
+                {t('common.login')}
+              </Button>
+            </Link>
+            <Link to="/auth?tab=register">
+              <Button className="rounded-full px-5 h-9 text-[13px] font-medium bg-violet-600 hover:bg-violet-700 text-white transition-all shadow-sm shadow-violet-500/20">
+                {t('common.getStarted')}
+              </Button>
+            </Link>
             <Button
               onClick={handleLogin}
               variant="ghost"
@@ -278,6 +326,7 @@ export default function LandingPage() {
             >
               {t('common.getStarted')}
             </Button>
+
           </div>
         </div>
       </nav>
@@ -285,6 +334,8 @@ export default function LandingPage() {
       {/* ── Hero Section ── */}
       <section className="relative flex items-center pt-28 pb-20 overflow-hidden bg-gradient-to-b from-slate-50 to-white">
         {/* Subtle grid background */}
+      <section className="relative min-h-screen flex items-center pt-20 pb-16 overflow-hidden bg-gradient-to-b from-slate-50/80 to-white">
+        {/* Background gradients */}
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute inset-0 opacity-[0.025]"
             style={{ backgroundImage: "linear-gradient(rgba(15,23,42,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.5) 1px, transparent 1px)", backgroundSize: "60px 60px" }}
@@ -356,6 +407,16 @@ export default function LandingPage() {
                     <div className="flex items-baseline gap-2 mt-2">
                       <p className="text-3xl font-bold text-slate-900 tracking-tight">+48%</p>
                       <span className="text-[12px] font-semibold text-slate-500">unumdorlik</span>
+              {/* Glow */}
+              <div className="absolute inset-0 bg-violet-200/40 blur-[80px] rounded-3xl scale-95 pointer-events-none" />
+
+              {/* Dashboard card */}
+              <div className="relative rounded-2xl bg-[#141414] border border-white/[0.09] shadow-2xl overflow-hidden ring-1 ring-slate-200/20">
+                {/* Top bar */}
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.07] bg-[#191919]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-[5px] bg-violet-600 flex items-center justify-center">
+                      <Zap className="w-3 h-3 text-white" strokeWidth={2.5} />
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
@@ -404,6 +465,8 @@ export default function LandingPage() {
                       ))}
                     </div>
                   </div>
+                </div>
+              </div>
 
                   {/* X-axis labels */}
                   <div className="pl-8 mt-3 flex justify-between gap-2">
@@ -412,6 +475,13 @@ export default function LandingPage() {
                     ))}
                   </div>
                 </div>
+        </div>
+      </section>
+
+      {/* ── Marquee strip ── */}
+      <div className="py-5 bg-slate-50 border-y border-slate-100">
+        <MarqueeStrip items={MARQUEE_ITEMS} />
+      </div>
 
                 {/* Footer: comparison */}
                 <div className="border-t border-slate-100 px-7 py-4 flex items-center justify-between bg-slate-50/40">
@@ -428,38 +498,6 @@ export default function LandingPage() {
                   <p className="text-[11px] text-slate-400 font-medium">12 oylik trend</p>
                 </div>
               </div>
-
-              {/* Floating stat: Goals */}
-              <MotionDiv
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.7 }}
-                className="absolute -bottom-4 -left-5 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl p-3.5 shadow-lg"
-              >
-                <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center">
-                  <Target className="w-4 h-4 text-orange-500" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{t('hero.stats.goals')}</p>
-                  <p className="text-[15px] font-bold text-slate-900">{content?.heroStats?.goalsCount || "128,400+"}</p>
-                </div>
-              </MotionDiv>
-
-              {/* Floating stat: Productivity */}
-              <MotionDiv
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.8 }}
-                className="absolute -top-4 -right-5 flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 backdrop-blur-xl p-3.5 shadow-lg"
-              >
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{t('hero.stats.productivity')}</p>
-                  <p className="text-[15px] font-bold text-emerald-700">{content?.heroStats?.productivityGrowth || "+48%"}</p>
-                </div>
-              </MotionDiv>
             </MotionDiv>
           </div>
         </div>
@@ -536,6 +574,7 @@ export default function LandingPage() {
 
       {/* ── Feature Cards ── */}
       <section className="py-20 bg-white">
+
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <MotionDiv
             initial={{ opacity: 0, y: 20 }}
@@ -544,6 +583,10 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
             className="mb-16 max-w-2xl"
           >
+            <p className="text-[11px] font-black tracking-[0.25em] text-indigo-500 uppercase mb-4">
+              {t('features.header')}
+            </p>
+
             <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 leading-[1.1]">
               {t('features.title')}
             </h2>
@@ -559,6 +602,14 @@ export default function LandingPage() {
               { icon: "Bot",        id: "Books" },
             ]).map((feature, idx) => {
               const Icon   = ICON_MAP[feature.icon] ?? Target;
+              { icon: "Brain",      id: "AI" },
+              { icon: "Zap",        id: "Habits" },
+              { icon: "Trophy",     id: "Gamification" },
+              { icon: "BookOpen",   id: "Books" },
+              { icon: "TrendingUp", id: "Analytics" },
+              { icon: "Bot",        id: "Books" },
+            ]).map((feature, idx) => {
+              const Icon   = ICON_MAP[feature.icon] ?? Sparkles;
               const theme  = FEATURE_THEMES[feature.icon] || DEFAULT_THEME;
               const title  = t(`features.items.${feature.id || feature.title}.title`);
               const desc   = t(`features.items.${feature.id || feature.title}.description`);
@@ -602,6 +653,10 @@ export default function LandingPage() {
               { value: "10K+",  label: t('stats.users'),   icon: Bot,    color: "text-slate-700", bg: "bg-slate-100" },
               { value: "500K+", label: t('stats.goals'),   icon: Target, color: "text-slate-700", bg: "bg-slate-100" },
               { value: "1M+",   label: t('stats.streaks'), icon: Flame,  color: "text-slate-700", bg: "bg-slate-100" },
+              { value: "10K+",  label: t('stats.users'),   icon: Users,  color: "text-violet-600", bg: "bg-violet-50" },
+              { value: "500K+", label: t('stats.goals'),   icon: Target, color: "text-orange-600", bg: "bg-orange-50" },
+              { value: "1M+",   label: t('stats.streaks'), icon: Flame,  color: "text-rose-600",   bg: "bg-rose-50" },
+
             ]).map((stat, i) => (
               <MotionDiv
                 key={stat.label}
@@ -624,11 +679,84 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Testimonials ── */}
+      <section className="py-24 bg-white">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <MotionDiv
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <p className="text-[11px] font-black tracking-[0.25em] text-indigo-500 uppercase mb-4">Testimonials</p>
+            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900">
+              Foydalanuvchilar nima deydi
+            </h2>
+          </MotionDiv>
+          <div className="grid md:grid-cols-3 gap-5">
+            {TESTIMONIALS.map((item, i) => (
+              <TestimonialCard key={i} {...item} delay={i * 0.1} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA Section — Bepul boshlash ── */}
+      <section className="py-28 bg-gradient-to-br from-violet-600 to-indigo-700 relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-white/10 rounded-full blur-[100px]" />
+          <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-400/20 rounded-full blur-[80px]" />
+        </div>
+        <MotionDiv
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7 }}
+          className="mx-auto max-w-3xl px-6 text-center relative z-10"
+        >
+          <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6 leading-[1.1] text-white">
+            Hayotingizni bugundan<br />
+            <span className="text-violet-200">
+              boshqaring
+            </span>
+          </h2>
+          <p className="text-white/70 text-lg mb-10 max-w-xl mx-auto">
+            Maqsadlar, odatlar, kitoblar, sog'liq — barchasini bir platformada. Bepul boshlang.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Link to="/auth?tab=register">
+              <Button className="rounded-full h-13 px-8 text-[15px] font-semibold bg-white text-violet-700 hover:bg-white/95 shadow-xl shadow-violet-900/20 transition-all hover:-translate-y-0.5">
+                Bepul boshlash
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+            <Link to="/dashboard">
+              <Button
+                variant="outline"
+                className="rounded-full h-13 px-8 text-[15px] font-semibold border-white/30 text-white bg-transparent hover:bg-white/10 hover:border-white/50 transition-all"
+              >
+                Demo ko'rish
+              </Button>
+            </Link>
+          </div>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-[13px] text-white/50">
+            {["Kredit karta shart emas", "Bepul tarif mavjud", "O'zbek tilida"].map((item) => (
+              <span key={item} className="flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-violet-200" />
+                {item}
+              </span>
+            ))}
+          </div>
+        </MotionDiv>
+      </section>
+
       {/* ── Founders Section ── */}
       <section className="py-20 bg-slate-50 border-t border-slate-100">
         <div className="mx-auto w-full max-w-7xl px-6 lg:px-8">
           <div className="mb-16">
             <p className="text-xs font-black tracking-[0.25em] text-slate-400 uppercase mb-4">{t('founders.header')}</p>
+
             <h2 className="text-5xl md:text-6xl font-extrabold tracking-tighter text-slate-900">{t('founders.title')}</h2>
           </div>
           <div className="grid gap-8 md:grid-cols-2 auto-rows-fr items-stretch">
@@ -645,6 +773,8 @@ export default function LandingPage() {
                       <span className="block">{founder.id === 'founder1' ? "MuhammadNurulloh" : "Asadbek"}</span>
                     </h3>
                     <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-1 text-[10px] font-black tracking-widest uppercase text-slate-600">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-4 py-1 text-[10px] font-black tracking-widest uppercase text-indigo-600">
+
                       {t(`founders.roles.${founder.id === 'founder1' ? 'dev' : 'design'}`)}
                     </div>
                   </div>
@@ -659,6 +789,8 @@ export default function LandingPage() {
                   {/* Bottom: Description */}
                   <div className="p-8 pt-6 flex-1 flex flex-col justify-end">
                     <p className="text-slate-500 leading-relaxed text-sm font-medium italic border-l-2 border-slate-300 pl-4 py-1">
+                    <p className="text-slate-500 leading-relaxed text-sm font-medium italic border-l-2 border-indigo-200 pl-4 py-1">
+
                       "{t(`founders.descriptions.${founder.id}`)}"
                     </p>
                   </div>
@@ -673,6 +805,7 @@ export default function LandingPage() {
       <footer className="bg-white border-t border-slate-100 pt-12 pb-8">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
             {/* Brand */}
             <div>
               <p className="text-[17px] font-bold text-slate-900 flex items-center gap-2 mb-3">
@@ -685,8 +818,23 @@ export default function LandingPage() {
                 Hayotingizni to'liq boshqarish uchun yagona platforma.
               </p>
             </div>
+
+            {/* Yordam only */}
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-4">Yordam</p>
+              <ul className="space-y-2.5">
+                {["Qo'llanma", "FAQ", "Narxlar", "Aloqa"].map((link) => (
+                  <li key={link}>
+                    <button className="text-[13px] text-slate-500 hover:text-slate-900 transition-colors">
+                      {link}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
+          </div>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-100">
             <p className="text-[12px] text-slate-400">© 2026 LifeOS. {t('common.footerRights')}</p>
             <div className="flex items-center gap-4">
