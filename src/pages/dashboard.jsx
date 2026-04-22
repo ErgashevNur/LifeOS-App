@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Target, Flame, Clock, Zap, Plus, Check, ChevronRight,
-  ArrowRight, Repeat, Brain, Sun, TrendingUp, Sparkles,
-  Circle, Play, Calendar, Edit3, Bot,
+  Repeat, Brain, TrendingUp,
+  Circle, Play, Calendar, Bot,
 } from "lucide-react";
 import { useLifeOSData } from "@/lib/lifeos-store";
 import { getAuthSession } from "@/lib/auth";
@@ -132,9 +132,7 @@ export default function DashboardPage() {
   const { data, actions, selectors, dashboardSummary } = useLifeOSData();
   const session = getAuthSession();
   const [newTask, setNewTask] = useState("");
-  const [reflectionWin, setReflectionWin] = useState("");
-  const [reflectionBlock, setReflectionBlock] = useState("");
-  const [reflectionTomorrow, setReflectionTomorrow] = useState("");
+
 
   const today = new Date();
   const dateStr = today.toLocaleDateString("uz-UZ", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
@@ -160,17 +158,14 @@ export default function DashboardPage() {
   const activeGoals = goals.filter((g) => g.progress < 100);
   const streak = dashboardSummary?.streak ?? 0;
 
-  const hasReflection = reflectionWin.trim() || reflectionBlock.trim() || reflectionTomorrow.trim();
-
   /* day score */
   const dayScore = useMemo(() => {
     let s = 0;
-    s += Math.round(taskPct * 0.4);          // 40 pts
-    s += Math.round(habitPct * 0.3);         // 30 pts
+    s += Math.round(taskPct * 0.5);              // 50 pts
+    s += Math.round(habitPct * 0.3);             // 30 pts
     s += Math.min(20, Math.round(focusMin / 3)); // 20 pts
-    if (hasReflection) s += 10;              // 10 pts
     return Math.min(100, s);
-  }, [taskPct, habitPct, focusMin, hasReflection]);
+  }, [taskPct, habitPct, focusMin]);
 
   const dayLabel =
     dayScore >= 80 ? "Ajoyib kun!" :
@@ -465,54 +460,6 @@ export default function DashboardPage() {
             </div>
           </Card>
 
-          {/* ── REFLECTION ── */}
-          <Card>
-            <CardHeader title="Kechki refleksiya" icon={Edit3} to="/reflection" />
-            <div className="px-5 pb-5 space-y-3">
-              <div className="space-y-2.5">
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">
-                    <Sun className="w-3 h-3 inline mr-1" />Bugungi yutug'im
-                  </label>
-                  <input
-                    value={reflectionWin}
-                    onChange={(e) => setReflectionWin(e.target.value)}
-                    placeholder="Eng yaxshi qilgan ishim..."
-                    className="w-full h-9 rounded-xl bg-zinc-50 border border-zinc-200 text-[12px] px-3 outline-none focus:border-zinc-400 transition-colors placeholder:text-zinc-400"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">
-                    <Sparkles className="w-3 h-3 inline mr-1" />Nima to'sqinlik qildi
-                  </label>
-                  <input
-                    value={reflectionBlock}
-                    onChange={(e) => setReflectionBlock(e.target.value)}
-                    placeholder="Eng katta to'siq..."
-                    className="w-full h-9 rounded-xl bg-zinc-50 border border-zinc-200 text-[12px] px-3 outline-none focus:border-zinc-400 transition-colors placeholder:text-zinc-400"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">
-                    <ArrowRight className="w-3 h-3 inline mr-1" />Ertaga nima muhim
-                  </label>
-                  <input
-                    value={reflectionTomorrow}
-                    onChange={(e) => setReflectionTomorrow(e.target.value)}
-                    placeholder="Ertaga eng muhim ish..."
-                    className="w-full h-9 rounded-xl bg-zinc-50 border border-zinc-200 text-[12px] px-3 outline-none focus:border-zinc-400 transition-colors placeholder:text-zinc-400"
-                  />
-                </div>
-              </div>
-
-              <Link
-                to="/reflection"
-                className="block text-center py-2.5 rounded-xl bg-zinc-100 text-zinc-600 text-[12px] font-semibold hover:bg-zinc-200 transition-colors"
-              >
-                To'liq refleksiya →
-              </Link>
-            </div>
-          </Card>
 
           {/* ── QUICK ACTIONS ── */}
           <Card className="p-4">
@@ -523,7 +470,6 @@ export default function DashboardPage() {
                 { label: "Odat qo'shish",     icon: Repeat,   to: "/habits" },
                 { label: "Fokus boshlash",     icon: Zap,      to: "/focus" },
                 { label: "AI so'rash",         icon: Bot,      to: "/assistant" },
-                { label: "Refleksiya",         icon: Edit3,    to: "/reflection" },
                 { label: "Kun rejasi",         icon: Calendar, to: "/planner" },
               ].map((a) => (
                 <Link

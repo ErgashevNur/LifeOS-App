@@ -4,7 +4,7 @@ import { useLifeOSData } from "@/lib/lifeos-store";
 import {
   Bot, LayoutDashboard,
   LogOut, Repeat, Settings, Shield, Target,
-  Zap, ChevronRight, Menu, X, Calendar, Brain,
+  Zap, ChevronRight, Menu, X, Calendar,
 } from "lucide-react";
 import { Navigate, Outlet, useLocation, useNavigate, NavLink } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,7 +16,6 @@ const NAV_ITEMS = [
   { to: "/goals",      label: "Maqsadlar",    icon: Target,          color: "#64748B" },
   { to: "/habits",     label: "Odatlar",      icon: Repeat,          color: "#64748B" },
   { to: "/focus",      label: "Deep Work",    icon: Zap,             color: "#64748B" },
-  { to: "/reflection", label: "Refleksiya",   icon: Brain,           color: "#64748B" },
   { to: "/assistant",  label: "AI Murabbiy",  icon: Bot,             color: "#64748B" },
   { to: "/settings",   label: "Sozlamalar",   icon: Settings,        color: "#64748B" },
 ];
