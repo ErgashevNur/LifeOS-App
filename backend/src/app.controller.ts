@@ -44,7 +44,9 @@ import {
 } from "./dto";
 import { AccessTokenPayload } from "./types";
 
-const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+const UPLOAD_DIR = process.env.VERCEL
+  ? "/tmp/lifeos-uploads"
+  : path.join(process.cwd(), "uploads");
 const ALLOWED_UPLOAD_MIME_TYPES: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
