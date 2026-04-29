@@ -1626,9 +1626,15 @@ export default function HabitsPage() {
   // ── System hooks ──
   const { recoveryHabit, openRecovery, closeRecovery, getStatus, getDaysMissed } = useStreakRecovery(habits);
   const { pendingMilestone, checkAndTrigger, dismissMilestone } = useMilestones();
-  const { scheduleHabitNotification } = usePushNotifications();
+  const { scheduleHabitNotification, scheduleStreakDangerAlerts } = usePushNotifications();
   const [activeTimerHabitId, setActiveTimerHabitId] = useState(null);
   const activeTimerHabit = habits.find(h => h.id === activeTimerHabitId) || null;
+
+  // ── Schedule 21:00 streak danger alerts for uncompleted habits ──
+  useEffect(() => {
+    const uncompleted = habits.filter(h => !h.completedToday && !h.skippedToday);
+    if (uncompleted.length) scheduleStreakDangerAlerts(uncompleted);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const today = todayISO();
 
@@ -1803,8 +1809,8 @@ export default function HabitsPage() {
 
     setHabits(prev => [newHabit, ...prev]);
     actions.addLocalHabit(newHabit);
-    // Schedule notification if time-based
-    if (newHabit.cueType === "time" && newHabit.scheduledTime) {
+    // Schedule notification if time-based (cueValue holds the time from HabitBuilder)
+    if (newHabit.cueType === "time" && (newHabit.cueValue || newHabit.scheduledTime)) {
       scheduleHabitNotification(newHabit);
     }
     setShowBuilder(false);
@@ -1838,6 +1844,21 @@ export default function HabitsPage() {
   const automaticHabits = habits.filter(h => h.isAutomatic || h.achievedMilestones?.includes(66));
   const detailHabit = detailId ? habits.find(h => h.id === detailId) : null;
 
+  const [notifPerm, setNotifPerm] = useState(
+    typeof Notification !== "undefined" ? Notification.permission : "denied"
+  );
+  const { requestPermission } = usePushNotifications();
+  const handleEnableNotifications = async () => {
+    const result = await requestPermission();
+    setNotifPerm(result);
+    if (result === "granted") {
+      // Re-schedule all time-based habits
+      habits.filter(h => h.cueType === "time" && (h.cueValue || h.scheduledTime))
+        .forEach(scheduleHabitNotification);
+      toast.success("🔔 Eslatmalar yoqildi");
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5 p-4 lg:p-6 max-w-[960px]">
 
@@ -1849,6 +1870,15 @@ export default function HabitsPage() {
           <p className="text-[13px] text-zinc-400 mt-0.5">Small votes. Big identity.</p>
         </div>
         <div className="flex items-center gap-2">
+          {notifPerm !== "granted" && (
+            <button
+              onClick={handleEnableNotifications}
+              className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-amber-50 text-amber-700 text-[12px] font-semibold hover:bg-amber-100 active:scale-[0.97] transition-all border border-amber-200"
+              title="Eslatmalarni yoqing"
+            >
+              <Bell className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button
             onClick={() => navigate("/journal")}
             className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-zinc-100 text-zinc-700 text-[12px] font-semibold hover:bg-zinc-200 active:scale-[0.97] transition-all"
