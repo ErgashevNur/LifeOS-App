@@ -4,6 +4,8 @@ import RootLayout from "./layouts/root-layout.jsx";
 import AppLayout from "./layouts/app-layout.jsx";
 import { Loader2 } from "lucide-react";
 import { useLifeOSData } from "./lib/lifeos-store.jsx";
+// ErrorPage: statically imported because AppErrorBoundary (class component) can't use lazy()
+import ErrorPage from "./pages/error-page.jsx";
 
 // Lazy loaded pages for performance optimization (Code Splitting)
 const LandingPage = lazy(() => import("./pages/landingPage.jsx"));
@@ -18,7 +20,6 @@ const UsersPage = lazy(() => import("./pages/users-page.jsx"));
 const DailyPlannerPage = lazy(() => import("./pages/planner/PlannerPage.jsx"));
 const FocusPage = lazy(() => import("./pages/focus-page.jsx"));
 const NotFoundPage = lazy(() => import("./pages/not-found-page.jsx"));
-const ErrorPage = lazy(() => import("./pages/error-page.jsx"));
 
 // New feature pages
 const GoalOnboarding = lazy(() => import("./pages/onboarding/GoalOnboarding.jsx"));
