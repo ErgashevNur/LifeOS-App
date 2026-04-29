@@ -57,23 +57,23 @@ export function usePushNotifications() {
     clearTimers(habit.id);
 
     // ── T-5 min: prep reminder ─────────────────────────────
-    const msPrep = msUntil(hours, minutes - 5 < 0 ? minutes : minutes - 5) - (minutes < 5 ? 60000 * 60 : 0);
     const msFull = msUntil(hours, minutes);
+    const msPrep = msFull - 5 * 60 * 1000; // exactly 5 minutes before
 
-    if (msPrep > 0 && minutes >= 5) {
+    if (msPrep > 0) {
       const tid = setTimeout(() => {
         if (Notification.permission !== "granted") return;
         new Notification(
           `⏱️ 5 daqiqada — ${habit.emoji || "📌"} ${habit.name}`,
           {
             body: habit.location
-              ? `${habit.location}ga yuring`
+              ? `${habit.location}ga boring`
               : `Tayyor bo'ling: ${habit.minimalVersion || "minimal versiya"}`,
             tag: `prep_${habit.id}`,
             silent: true,
           }
         );
-      }, msPrep - 5 * 60 * 1000);
+      }, msPrep);
       addTimer(habit.id, tid);
     }
 
