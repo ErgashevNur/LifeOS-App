@@ -69,7 +69,7 @@ function Card({ children, className, ...rest }) {
       {...rest}
     >
       {children}
-    </div>
+    </motion.div>
   );
 }
 
@@ -185,20 +185,6 @@ function CircularScore({ score, size = 96, strokeWidth = 6 }) {
         <span className="text-[10px] text-zinc-400 uppercase">ball</span>
       </div>
     </div>
-  );
-}
-
-function Checkbox({ checked, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "w-[18px] h-[18px] rounded border flex items-center justify-center",
-        checked ? "bg-zinc-900 border-zinc-900" : "border-zinc-300"
-      )}
-    >
-      {checked && <Check className="w-3 h-3 text-white" />}
-    </button>
   );
 }
 
