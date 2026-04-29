@@ -1,7 +1,25 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import HabitBuilder from "./habits/HabitBuilder";
 import { useLifeOSData } from "@/lib/lifeos-store";
+import InsightsSection from "@/components/habits/InsightsSection";
+import ActiveHabitTimer from "@/components/habits/ActiveHabitTimer";
+import StreakRecoverySheet from "@/components/habits/StreakRecoverySheet";
+import MilestoneModal from "@/components/habits/MilestoneModal";
+import LifeEventSheet from "@/components/habits/LifeEventSheet";
+import ProgressionOfferModal from "@/components/habits/ProgressionOfferModal";
+import TransformationPromptModal from "@/pages/reflection/TransformationPromptModal";
+import { useStreakRecovery } from "@/hooks/useStreakRecovery";
+import { useMilestones } from "@/hooks/useMilestones";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { getStreakStatus, todayISO, applyFreeze } from "@/lib/streakEngine";
+import { LIFE_EVENTS } from "@/lib/lifeEvents";
+import { shouldOfferProgression, getNextStage, getCurrentStage, getProgressToNext } from "@/lib/progressionEngine";
+import { shouldAskTransformation, buildTransformationQuestion } from "@/lib/transformationEngine";
+import { recordIdentityAction, buildReinforcementMessage } from "@/lib/identityTracker";
+import { toast } from "sonner";
 import {
   Plus, Check, X, Clock, Flame, Target, BarChart3,
   ChevronDown, MoreHorizontal, Edit3, Trash2, Eye,
@@ -9,7 +27,7 @@ import {
   Sun, Moon, Coffee, Sparkles, CheckCircle2, ArrowRight,
   RefreshCw, StickyNote, SkipForward, AlarmClock, Star,
   Circle, Activity, Hash, Layers, Filter, ArrowUpDown,
-  LayoutGrid, List, Bell, Lock, Unlock, Award,
+  LayoutGrid, List, Bell, Lock, Unlock, Award, Play, Timer,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -717,9 +735,7 @@ function OverviewHeader({ habits, onAddHabit }) {
    TODAY'S HABIT ROW — list view item
    ═══════════════════════════════════════════════════════════════════ */
 
-function TodayHabitRow({ habit, onCheck, onSkip, onDetails, onEdit }) {
-  const [showSkipMenu, setShowSkipMenu] = useState(false);
-  const [skipReason, setSkipReason] = useState("");
+function TodayHabitRow({ habit, onCheck, onSkip, onDetails, onEdit, onStartTimer, onOpenRecovery, streakStatus }) {
   const cat = CATEGORIES.find(c => c.value === habit.category);
   const timeObj = TIMES.find(t => t.value === habit.time);
   const TimeIcon = timeObj?.icon || Clock;
@@ -729,6 +745,17 @@ function TodayHabitRow({ habit, onCheck, onSkip, onDetails, onEdit }) {
     optional:  { label: "Optional",  className: "bg-zinc-100 text-zinc-600" },
     recovery:  { label: "Recovery",  className: "bg-amber-50 text-amber-700" },
   }[habit.type] || {};
+
+  // Streak display
+  const currentStreak = habit.streak || 0;
+  const recordStreak = habit.recordStreak || habit.longestStreak || currentStreak;
+  const streakColorClass = {
+    active:   "text-orange-500",
+    at_risk:  "text-amber-500",
+    missed_1: "text-zinc-400",
+    missed_2: "text-zinc-400",
+    recovery: "text-zinc-300",
+  }[streakStatus] || "text-zinc-400";
 
   return (
     <motion.div layout {...fade}
@@ -756,11 +783,12 @@ function TodayHabitRow({ habit, onCheck, onSkip, onDetails, onEdit }) {
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
+          {habit.emoji && <span className="text-[13px]">{habit.emoji}</span>}
           <span className={cn(
             "text-[13px] font-semibold leading-snug",
             habit.completedToday ? "text-zinc-400 line-through" : "text-zinc-900",
           )}>
-            {habit.title}
+            {habit.name || habit.title}
           </span>
           <Badge className={typeMeta.className}>{typeMeta.label}</Badge>
           {habit.recoveryMode && (
@@ -768,30 +796,76 @@ function TodayHabitRow({ habit, onCheck, onSkip, onDetails, onEdit }) {
               <RefreshCw className="w-2.5 h-2.5" /> Recovery
             </Badge>
           )}
+          {habit.achievedMilestones?.includes(66) && (
+            <Badge className="bg-violet-50 text-violet-600">● Avtomatik</Badge>
+          )}
         </div>
 
-        <div className="flex items-center gap-3 mt-0.5">
+        <div className="flex items-center gap-3 mt-0.5 flex-wrap">
           <span className="text-[10px] text-zinc-400 flex items-center gap-1">
             {cat?.icon} {cat?.label}
           </span>
-          <span className="text-[10px] text-zinc-400 flex items-center gap-1">
-            <TimeIcon className="w-3 h-3" strokeWidth={1.8} />
-            {timeObj?.label}
-          </span>
-          <span className="text-[10px] text-zinc-400 flex items-center gap-1">
+          {/* Streak */}
+          <span className={cn("text-[10px] font-semibold flex items-center gap-1", streakColorClass)}>
             <Flame className="w-3 h-3" strokeWidth={2} />
-            {habit.streak}d streak
+            {currentStreak === 0 ? "Muzlatilgan 🧊" : `${currentStreak}d streak`}
           </span>
-          {habit.cue && (
-            <span className="text-[10px] text-zinc-300 truncate max-w-[180px] hidden sm:block">
-              {habit.cue}
+          {recordStreak > currentStreak && (
+            <span className="text-[10px] text-zinc-400 flex items-center gap-1">
+              · 🏆 {recordStreak}
+            </span>
+          )}
+          {/* Status badges */}
+          {streakStatus === "at_risk" && !habit.completedToday && (
+            <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+              ⚠️ Bugun bajaring
+            </span>
+          )}
+          {streakStatus === "missed_1" && (
+            <span className="text-[10px] font-semibold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
+              🧊 Muzlatilgan
             </span>
           )}
         </div>
+
+        {/* Progression bar */}
+        {(() => {
+          const stage = getCurrentStage(currentStreak);
+          const nextStg = getNextStage(currentStreak);
+          if (!nextStg) return null;
+          const progress = getProgressToNext(currentStreak);
+          return (
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-[10px]">{stage.emoji}</span>
+              <div className="flex-1 h-1 bg-black/[0.06] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-violet-400 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.max(2, progress * 100)}%` }}
+                />
+              </div>
+              <span className="text-[9px] text-zinc-400">
+                {nextStg.daysRequired - currentStreak}k → {nextStg.emoji}
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Actions */}
       <div className="flex items-center gap-1 flex-shrink-0">
+        {/* Recovery button for 2+ days missed */}
+        {(streakStatus === "missed_2" || streakStatus === "recovery") && !habit.completedToday && (
+          <button
+            onClick={() => onOpenRecovery(habit.id)}
+            className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-violet-600 bg-violet-50 hover:bg-violet-100 transition-colors"
+          >
+            {streakStatus === "recovery" ? "🆘 Qayta" : "🔄 Qayta"}
+          </button>
+        )}
+        {/* Timer button */}
+        {!habit.completedToday && !habit.skippedToday && (
+          <IconBtn icon={Play} onClick={() => onStartTimer(habit.id)} label="Timer boshla" />
+        )}
         {!habit.completedToday && !habit.skippedToday && (
           <Dropdown
             trigger={
@@ -810,9 +884,7 @@ function TodayHabitRow({ habit, onCheck, onSkip, onDetails, onEdit }) {
           </Dropdown>
         )}
         <IconBtn icon={Eye} onClick={() => onDetails(habit.id)} label="Details" />
-        <Dropdown
-          trigger={<IconBtn icon={MoreHorizontal} label="More" />}
-        >
+        <Dropdown trigger={<IconBtn icon={MoreHorizontal} label="More" />}>
           <DropdownItem icon={Edit3} label="Edit" onClick={() => onEdit(habit.id)} />
           <DropdownItem icon={Eye} label="View Details" onClick={() => onDetails(habit.id)} />
         </Dropdown>
@@ -1501,13 +1573,14 @@ function AnalyticsTab({ habits }) {
    ═══════════════════════════════════════════════════════════════════ */
 
 export default function HabitsPage() {
-  const { data, actions: storeActions } = useLifeOSData();
+  const { data, actions, completionLogs, activeLifeEvent, journalEntries } = useLifeOSData();
+  const navigate = useNavigate();
   const [habits, setHabits] = useState(() =>
-    data.habits.length > 0 ? data.habits.map(toUIHabit) : INITIAL_HABITS
+    data?.habits?.length > 0 ? data.habits.map(toUIHabit) : INITIAL_HABITS
   );
 
   useEffect(() => {
-    if (data.habits.length === 0) return;
+    if (!data?.habits?.length) return;
     setHabits(prev => {
       const prevMap = new Map(prev.map(h => [h.id, h]));
       return data.habits.map(bh => {
@@ -1517,39 +1590,148 @@ export default function HabitsPage() {
           : toUIHabit(bh);
       });
     });
-  }, [data.habits]);
+  }, [data?.habits]);
   const [activeView, setActiveView] = useState("today");
   const [gridView, setGridView] = useState(false);
   const [filterType, setFilterType] = useState("");
   const [filterCat, setFilterCat] = useState("");
+  const [showBuilder, setShowBuilder] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editHabit, setEditHabit] = useState(null);
   const [detailId, setDetailId] = useState(null);
 
-  /* ── Mutations ── */
+  // ── Life Event ──
+  const [showLifeEventSheet, setShowLifeEventSheet] = useState(false);
+  const handleLifeEventSelected = useCallback((event, duration) => {
+    actions.setLifeEvent(event, duration);
+  }, [actions]);
+
+  // ── Progression ──
+  const [progressionHabit, setProgressionHabit] = useState(null);
+  const [progressionNextStage, setProgressionNextStage] = useState(null);
+
+  // ── Transformation Journal ──
+  const [transformationMilestone, setTransformationMilestone] = useState(null);
+  const [transformationQuestion, setTransformationQuestion] = useState("");
+
+  // Check transformation prompt on mount
+  useEffect(() => {
+    const milestone = shouldAskTransformation(habits, journalEntries);
+    if (milestone) {
+      setTransformationMilestone(milestone);
+      setTransformationQuestion(buildTransformationQuestion(milestone, journalEntries));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── System hooks ──
+  const { recoveryHabit, openRecovery, closeRecovery, getStatus, getDaysMissed } = useStreakRecovery(habits);
+  const { pendingMilestone, checkAndTrigger, dismissMilestone } = useMilestones();
+  const { scheduleHabitNotification } = usePushNotifications();
+  const [activeTimerHabitId, setActiveTimerHabitId] = useState(null);
+  const activeTimerHabit = habits.find(h => h.id === activeTimerHabitId) || null;
+
+  const today = todayISO();
+
+  /* ── Timer complete ── */
+  const handleTimerComplete = useCallback((durationSeconds) => {
+    if (!activeTimerHabitId) return;
+
+    // Store action returns { newStreak, newMilestone }
+    const result = actions.completeHabitWithTimer(activeTimerHabitId, durationSeconds);
+
+    // Update local habits state
+    setHabits(prev => prev.map(h => {
+      if (h.id !== activeTimerHabitId) return h;
+      const completedDates = [...(h.completedDates || []).filter(d => d !== today), today];
+      const newStreak = (h.streak || 0) + 1;
+      const todayIdx = (h.history || []).findIndex(e => e.date === today);
+      const newHistory = [...(h.history || [])];
+      if (todayIdx >= 0) newHistory[todayIdx] = { ...newHistory[todayIdx], done: true };
+      const updatedHabit = {
+        ...h, completedDates, completedToday: true,
+        streak: newStreak,
+        recordStreak: Math.max(h.recordStreak || 0, newStreak),
+        totalMinutes: (h.totalMinutes || 0) + Math.floor(durationSeconds / 60),
+        history: newHistory,
+      };
+      // Check milestone with updated habit
+      checkAndTrigger(updatedHabit, newStreak);
+      return updatedHabit;
+    }));
+  }, [activeTimerHabitId, today, actions, checkAndTrigger]);
+
+  /* ── Timer skip ── */
+  const handleTimerSkip = useCallback(() => {
+    if (activeTimerHabitId) {
+      actions.skipHabit(activeTimerHabitId);
+      setHabits(prev => prev.map(h =>
+        h.id === activeTimerHabitId ? { ...h, skippedToday: true } : h,
+      ));
+    }
+  }, [activeTimerHabitId, actions]);
+
+  /* ── Simple check-in (no timer) ── */
   const checkIn = useCallback((id) => {
-    storeActions.toggleHabitCheckIn(id);
+    actions.toggleHabitCompletion(id, today);
     setHabits(prev => prev.map(h => {
       if (h.id !== id) return h;
-      const todayIdx = h.history.findIndex(e => e.date === todayStr());
-      const newHistory = [...h.history];
+      const todayIdx = (h.history || []).findIndex(e => e.date === today);
+      const newHistory = [...(h.history || [])];
       if (todayIdx >= 0) newHistory[todayIdx] = { ...newHistory[todayIdx], done: !newHistory[todayIdx].done };
       const newDone = !h.completedToday;
-      const newStreak = newDone ? h.streak + 1 : Math.max(0, h.streak - 1);
-      return { ...h, completedToday: newDone, history: newHistory, streak: newStreak };
-    }));
-  }, [storeActions]);
+      const newStreak = newDone ? (h.streak || 0) + 1 : Math.max(0, (h.streak || 0) - 1);
+      if (newDone) {
+        const completedDates = [...(h.completedDates || []).filter(d => d !== today), today];
+        const updated = { ...h, completedToday: true, history: newHistory, streak: newStreak, completedDates };
+        checkAndTrigger(updated, newStreak);
 
+        // Identity reinforcement — har complete bo'lgan odat identitet sanoqchisini oshiradi
+        if (h.identityStatement) {
+          const result = recordIdentityAction(h.identityStatement);
+          const msg = buildReinforcementMessage(result);
+          if (msg) {
+            toast.success(msg, { duration: 3000 });
+          }
+        }
+
+        return updated;
+      }
+      return { ...h, completedToday: false, history: newHistory, streak: newStreak };
+    }));
+  }, [today, actions, checkAndTrigger]);
+
+  /* ── Skip ── */
   const skip = useCallback((id, reason) => {
+    actions.skipHabit(id, reason);
     setHabits(prev => prev.map(h => {
       if (h.id !== id) return h;
-      const todayIdx = h.history.findIndex(e => e.date === todayStr());
-      const newHistory = [...h.history];
+      const todayIdx = (h.history || []).findIndex(e => e.date === today);
+      const newHistory = [...(h.history || [])];
       if (todayIdx >= 0) newHistory[todayIdx] = { ...newHistory[todayIdx], skipped: true, reason };
       return { ...h, skippedToday: true, history: newHistory };
     }));
-  }, []);
+  }, [today, actions]);
 
+  /* ── Recovery restart ── */
+  const handleRecoveryRestart = useCallback(() => {
+    if (!recoveryHabit) return;
+    actions.enterRecoveryMode(recoveryHabit.id);
+    setActiveTimerHabitId(recoveryHabit.id);
+  }, [recoveryHabit, actions]);
+
+  /* ── Streak Freeze ── */
+  const handleUseFreeze = useCallback((habitId) => {
+    setHabits(prev => prev.map(h => {
+      if (h.id !== habitId) return h;
+      const frozen = applyFreeze(h, today);
+      // Streakni saqlab qolamiz — completedDates ga "freeze" markeri qo'shilmaydi,
+      // lekin freezeUsedDates orqali UX ko'rsatadi
+      return frozen;
+    }));
+    toast.success("❄️ Streak Freeze ishlatildi — rekordingiz saqlanib turibdi", { duration: 3500 });
+  }, [today]);
+
+  /* ── Save from quick modal ── */
   const saveHabit = useCallback((formData) => {
     if (editHabit) {
       setHabits(prev => prev.map(h => h.id === editHabit.id ? { ...h, ...formData } : h));
@@ -1561,11 +1743,72 @@ export default function HabitsPage() {
         id: uid(), ...formData,
         streak: 0, longestStreak: 0, consistency: 0,
         completedToday: false, skippedToday: false, recoveryMode: false,
+        completedDates: [], achievedMilestones: [], recordStreak: 0,
         history, notes: [],
       };
       setHabits(prev => [newHabit, ...prev]);
     }
   }, [editHabit, storeActions]);
+
+  /* ── Save from HabitBuilder wizard ── */
+  const handleSaveBuilder = useCallback((habitData) => {
+    const history = generateHistory(84, 0);
+    const timeStr = habitData.timeOfDay || "";
+    const timeVal =
+      timeStr.includes("Erta") || timeStr.includes("tong") ? "morning" :
+      timeStr.includes("Kech") || timeStr.includes("kech") ? "evening" :
+      timeStr.includes("Tushan") || timeStr.includes("keyin") ? "afternoon" : "flexible";
+
+    const newHabit = {
+      id: habitData.id || uid(),
+      title: habitData.name,
+      name: habitData.name,
+      category: habitData.category,
+      type: "essential",
+      frequency: habitData.frequency,
+      time: timeVal,
+      difficulty: "medium",
+      identity: habitData.identityStatement ? `Men — ${habitData.identityStatement}` : "",
+      identityStatement: habitData.identityStatement,
+      cue: habitData.cueValue || "",
+      cueValue: habitData.cueValue || "",
+      cueType: habitData.cueType,
+      location: habitData.location || "",
+      afterCue: habitData.afterCue || "",
+      scheduledTime: habitData.scheduledTime,
+      customDays: habitData.customDays,
+      minimalVersion: habitData.minimalVersion,
+      minimalDuration: habitData.minimalDuration,
+      emoji: habitData.emoji,
+      whys: habitData.whys,
+      linkedHabit: habitData.linkedHabit,
+      milestoneRewards: habitData.milestoneRewards,
+      rewardType: habitData.rewardType,
+      rewardDescription: habitData.rewardDescription,
+      completedToday: false,
+      recoveryMode: false,
+      completedDates: [],
+      achievedMilestones: [],
+      recordStreak: 0,
+      totalMinutes: 0,
+      skipCount: 0,
+      recoveryCount: 0,
+      isAutomatic: false,
+      streak: 0,
+      longestStreak: 0,
+      consistency: 0,
+      history,
+      notes: [],
+    };
+
+    setHabits(prev => [newHabit, ...prev]);
+    actions.addLocalHabit(newHabit);
+    // Schedule notification if time-based
+    if (newHabit.cueType === "time" && newHabit.scheduledTime) {
+      scheduleHabitNotification(newHabit);
+    }
+    setShowBuilder(false);
+  }, [actions, scheduleHabitNotification]);
 
   const deleteHabit = useCallback((id) => {
     storeActions.removeHabit(id);
@@ -1592,6 +1835,7 @@ export default function HabitsPage() {
   }, [habits, activeView, filterType, filterCat]);
 
   const completedToday = habits.filter(h => h.completedToday);
+  const automaticHabits = habits.filter(h => h.isAutomatic || h.achievedMilestones?.includes(66));
   const detailHabit = detailId ? habits.find(h => h.id === detailId) : null;
 
   return (
@@ -1605,21 +1849,71 @@ export default function HabitsPage() {
           <p className="text-[13px] text-zinc-400 mt-0.5">Small votes. Big identity.</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => { setEditHabit(null); setCreateOpen(true); }}
+          <button
+            onClick={() => navigate("/journal")}
+            className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-zinc-100 text-zinc-700 text-[12px] font-semibold hover:bg-zinc-200 active:scale-[0.97] transition-all"
+          >
+            📖 Jurnal
+          </button>
+          <button
+            onClick={() => setShowLifeEventSheet(true)}
+            className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-amber-50 text-amber-700 text-[12px] font-semibold hover:bg-amber-100 active:scale-[0.97] transition-all border border-amber-200"
+          >
+            ✈️ Hayot
+          </button>
+          <button
+            onClick={() => navigate("/habits/library")}
+            className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-zinc-100 text-zinc-700 text-[12px] font-semibold hover:bg-zinc-200 active:scale-[0.97] transition-all"
+          >
+            📚 Kutubxona
+          </button>
+          <button onClick={() => setShowBuilder(true)}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-zinc-900 text-white text-[12px] font-bold hover:bg-zinc-800 active:scale-[0.97] transition-all"
           >
-            <Plus className="w-4 h-4" strokeWidth={2.5} /> Add Habit
+            <Plus className="w-4 h-4" strokeWidth={2.5} /> Yangi odat
           </button>
         </div>
       </motion.div>
 
       {/* ── OVERVIEW HERO ── */}
-      <OverviewHeader habits={habits} onAddHabit={() => { setEditHabit(null); setCreateOpen(true); }} />
+      <OverviewHeader habits={habits} onAddHabit={() => setShowBuilder(true)} />
+
+      {/* ── INSIGHTS (shown when enough data) ── */}
+      <InsightsSection habits={habits} completionLogs={completionLogs} />
+
+      {/* ── LIFE EVENT BANNER ── */}
+      <AnimatePresence>
+        {activeLifeEvent && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="flex items-center gap-2.5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl"
+          >
+            <span className="text-[18px]">{activeLifeEvent.emoji}</span>
+            <div className="flex-1">
+              <p className="text-[12px] font-semibold text-amber-800">
+                {activeLifeEvent.label} rejimi
+              </p>
+              <p className="text-[11px] text-amber-600 mt-0.5">
+                Odatlar moslashtirildi · {activeLifeEvent.endDate
+                  ? `${Math.max(0, Math.ceil((new Date(activeLifeEvent.endDate) - new Date()) / (1000*60*60*24)))} kun qoldi`
+                  : "Tayyor bo'lganda qaytamiz"}
+              </p>
+            </div>
+            <button
+              onClick={() => actions.clearLifeEvent()}
+              className="text-[11px] text-amber-600 font-medium px-2.5 py-1.5 bg-amber-100 rounded-lg"
+            >
+              Qaytish
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── VIEW TABS + CONTROLS ── */}
       <Card className="px-4 py-3">
         <div className="flex items-center gap-2 flex-wrap">
-          {/* View tabs */}
           <div className="flex items-center gap-1 bg-zinc-100 rounded-xl p-1">
             {VIEWS.map(v => (
               <button key={v.key} onClick={() => setActiveView(v.key)}
@@ -1640,7 +1934,6 @@ export default function HabitsPage() {
 
           <div className="flex-1" />
 
-          {/* Filters (only for All view) */}
           {activeView === "all" && (
             <>
               <Dropdown
@@ -1663,8 +1956,6 @@ export default function HabitsPage() {
                   />
                 ))}
               </Dropdown>
-
-              {/* Grid/List toggle */}
               <div className="flex items-center gap-0.5 bg-zinc-100 rounded-xl p-0.5">
                 <IconBtn icon={List} size="w-8 h-8" active={!gridView} onClick={() => setGridView(false)} label="List view" />
                 <IconBtn icon={LayoutGrid} size="w-8 h-8" active={gridView} onClick={() => setGridView(true)} label="Grid view" />
@@ -1680,7 +1971,6 @@ export default function HabitsPage() {
       <AnimatePresence mode="wait">
         {activeView === "today" && (
           <motion.div key="today" {...fade} className="flex flex-col gap-4">
-            {/* Pending habits */}
             {filtered.length > 0 ? (
               <Card className="overflow-hidden">
                 <div className="px-5 py-3 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
@@ -1694,23 +1984,25 @@ export default function HabitsPage() {
                     key={h.id} habit={h}
                     onCheck={checkIn} onSkip={skip}
                     onDetails={setDetailId} onEdit={handleEdit}
+                    onStartTimer={setActiveTimerHabitId}
+                    onOpenRecovery={openRecovery}
+                    streakStatus={getStatus(h)}
                   />
                 ))}
               </Card>
             ) : (
               <EmptyState
                 icon={CheckCircle2}
-                title="All done for today!"
-                desc="Outstanding. Every completion is a vote for the person you're becoming."
+                title="Bugun hammasi bajarildi!"
+                desc="Ajoyib. Har bir bajarilish o'zingizga bo'lgan ovozdir."
               />
             )}
 
-            {/* Completed today */}
             {completedToday.length > 0 && (
               <Card className="overflow-hidden">
                 <div className="px-5 py-3 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
                   <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
-                    Completed · {completedToday.length}
+                    Bajarildi · {completedToday.length}
                   </p>
                   <Check className="w-3.5 h-3.5 text-zinc-400" />
                 </div>
@@ -1719,6 +2011,32 @@ export default function HabitsPage() {
                     key={h.id} habit={h}
                     onCheck={checkIn} onSkip={skip}
                     onDetails={setDetailId} onEdit={handleEdit}
+                    onStartTimer={setActiveTimerHabitId}
+                    onOpenRecovery={openRecovery}
+                    streakStatus={getStatus(h)}
+                  />
+                ))}
+              </Card>
+            )}
+
+            {/* Automatic habits section */}
+            {automaticHabits.length > 0 && (
+              <Card className="overflow-hidden">
+                <div className="px-5 py-3 border-b border-zinc-100 bg-violet-50/50 flex items-center justify-between">
+                  <p className="text-[11px] font-bold text-violet-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-violet-500 inline-block" />
+                    Avtomatik odatlar · {automaticHabits.length}
+                  </p>
+                  <span className="text-[10px] text-violet-400">66+ kun</span>
+                </div>
+                {automaticHabits.map(h => (
+                  <TodayHabitRow
+                    key={h.id} habit={h}
+                    onCheck={checkIn} onSkip={skip}
+                    onDetails={setDetailId} onEdit={handleEdit}
+                    onStartTimer={setActiveTimerHabitId}
+                    onOpenRecovery={openRecovery}
+                    streakStatus={getStatus(h)}
                   />
                 ))}
               </Card>
@@ -1767,6 +2085,9 @@ export default function HabitsPage() {
                     key={h.id} habit={h}
                     onCheck={checkIn} onSkip={skip}
                     onDetails={setDetailId} onEdit={handleEdit}
+                    onStartTimer={setActiveTimerHabitId}
+                    onOpenRecovery={openRecovery}
+                    streakStatus={getStatus(h)}
                   />
                 ))}
               </Card>
@@ -1792,6 +2113,25 @@ export default function HabitsPage() {
         editHabit={editHabit}
       />
 
+      {/* ── Habit Builder Wizard ── */}
+      <AnimatePresence>
+        {showBuilder && (
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", stiffness: 320, damping: 34 }}
+            className="fixed inset-0 z-50"
+          >
+            <HabitBuilder
+              onSave={handleSaveBuilder}
+              onCancel={() => setShowBuilder(false)}
+              existingHabits={habits}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <HabitDetailDrawer
         habit={detailHabit}
         open={!!detailId}
@@ -1800,6 +2140,97 @@ export default function HabitsPage() {
         onSkip={skip}
         onUpdate={updateHabit}
       />
+
+      {/* ── ACTIVE HABIT TIMER (Friction Engine) ── */}
+      <AnimatePresence>
+        {activeTimerHabit && (
+          <ActiveHabitTimer
+            key={activeTimerHabitId}
+            habit={activeTimerHabit}
+            onComplete={handleTimerComplete}
+            onSkip={handleTimerSkip}
+            onClose={() => setActiveTimerHabitId(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── STREAK RECOVERY SHEET ── */}
+      <AnimatePresence>
+        {recoveryHabit && (
+          <StreakRecoverySheet
+            key={recoveryHabit.id}
+            habit={recoveryHabit}
+            daysMissed={getDaysMissed(recoveryHabit)}
+            onClose={closeRecovery}
+            onRestart={handleRecoveryRestart}
+            onUseFreeze={() => handleUseFreeze(recoveryHabit.id)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── MILESTONE MODAL (66 kun nishoni) ── */}
+      <AnimatePresence>
+        {pendingMilestone && (
+          <MilestoneModal
+            key={pendingMilestone.milestone}
+            milestone={pendingMilestone.milestone}
+            habit={pendingMilestone.habit}
+            config={pendingMilestone.config}
+            onClose={() => {
+              actions.acknowledgeMilestone(pendingMilestone.habit.id, pendingMilestone.milestone);
+              dismissMilestone();
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── LIFE EVENT SHEET ── */}
+      <AnimatePresence>
+        {showLifeEventSheet && (
+          <LifeEventSheet
+            onClose={() => setShowLifeEventSheet(false)}
+            onEventSelected={handleLifeEventSelected}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── PROGRESSION OFFER MODAL ── */}
+      <AnimatePresence>
+        {progressionHabit && progressionNextStage && (
+          <ProgressionOfferModal
+            habit={progressionHabit}
+            nextStage={progressionNextStage}
+            onAccept={() => {
+              actions.acceptProgression(progressionHabit.id, progressionNextStage.id);
+              setProgressionHabit(null);
+              setProgressionNextStage(null);
+            }}
+            onDecline={() => {
+              actions.declineProgression(progressionHabit.id, progressionNextStage.id);
+              setProgressionHabit(null);
+              setProgressionNextStage(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── TRANSFORMATION PROMPT MODAL ── */}
+      <AnimatePresence>
+        {transformationMilestone && (
+          <TransformationPromptModal
+            milestone={transformationMilestone}
+            question={transformationQuestion}
+            onAnswer={(answer) => {
+              actions.addJournalEntry(transformationMilestone, transformationQuestion, answer);
+              setTransformationMilestone(null);
+            }}
+            onLater={() => {
+              actions.snoozeJournalEntry(transformationMilestone);
+              setTransformationMilestone(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

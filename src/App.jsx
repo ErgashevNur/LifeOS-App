@@ -1,23 +1,30 @@
 import { lazy, Suspense } from "react";
-import { Navigate, createBrowserRouter, RouterProvider } from "react-router-dom";
+import { Navigate, createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
 import RootLayout from "./layouts/root-layout.jsx";
 import AppLayout from "./layouts/app-layout.jsx";
 import { Loader2 } from "lucide-react";
+import { useLifeOSData } from "./lib/lifeos-store.jsx";
 
 // Lazy loaded pages for performance optimization (Code Splitting)
 const LandingPage = lazy(() => import("./pages/landingPage.jsx"));
 const AuthPage = lazy(() => import("./pages/auth-page.jsx"));
 const WelcomePage = lazy(() => import("./pages/welcome-page.jsx"));
-const DashboardPage = lazy(() => import("./pages/dashboard.jsx"));
+const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage.jsx"));
 const AssistantPage = lazy(() => import("./pages/assistant-page.jsx"));
 const GoalsPage = lazy(() => import("./pages/goals-page.jsx"));
 const HabitsPage = lazy(() => import("./pages/habits-page.jsx"));
 const SettingsPage = lazy(() => import("./pages/settings-page.jsx"));
 const UsersPage = lazy(() => import("./pages/users-page.jsx"));
-const DailyPlannerPage = lazy(() => import("./pages/daily-planner-page.jsx"));
+const DailyPlannerPage = lazy(() => import("./pages/planner/PlannerPage.jsx"));
 const FocusPage = lazy(() => import("./pages/focus-page.jsx"));
 const NotFoundPage = lazy(() => import("./pages/not-found-page.jsx"));
 const ErrorPage = lazy(() => import("./pages/error-page.jsx"));
+
+// New feature pages
+const GoalOnboarding = lazy(() => import("./pages/onboarding/GoalOnboarding.jsx"));
+const HabitLibraryPage = lazy(() => import("./pages/habits/HabitLibraryPage.jsx"));
+const AccountabilityPage = lazy(() => import("./pages/accountability/AccountabilityPage.jsx"));
+const TransformationJournal = lazy(() => import("./pages/reflection/TransformationJournal.jsx"));
 
 const PageLoader = () => (
   <div className="flex h-full w-full min-h-[50vh] items-center justify-center">
@@ -27,6 +34,15 @@ const PageLoader = () => (
     </div>
   </div>
 );
+
+// Redirects users who haven't completed onboarding to /onboarding.
+function ProtectedRoute() {
+  const { onboardingCompleted } = useLifeOSData();
+  if (!onboardingCompleted) {
+    return <Navigate to="/onboarding" replace />;
+  }
+  return <Outlet />;
+}
 
 const router = createBrowserRouter([
   {
@@ -59,6 +75,14 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "onboarding",
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <GoalOnboarding />
+          </Suspense>
+        ),
+      },
+      {
         path: "login",
         element: <Navigate to="/auth?tab=login" replace />,
       },
@@ -67,6 +91,8 @@ const router = createBrowserRouter([
         element: <Navigate to="/auth?tab=register" replace />,
       },
       {
+        element: <ProtectedRoute />,
+        children: [{
         element: <AppLayout />,
         children: [
           {
@@ -90,6 +116,30 @@ const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoader />}>
                 <HabitsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "habits/library",
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <HabitLibraryPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "accountability",
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <AccountabilityPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "journal",
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <TransformationJournal />
               </Suspense>
             ),
           },
@@ -135,6 +185,7 @@ const router = createBrowserRouter([
             ),
           },
         ],
+        }],
       },
       {
         path: "*",
