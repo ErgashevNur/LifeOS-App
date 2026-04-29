@@ -14,7 +14,6 @@ const WelcomePage = lazy(() => import("./pages/welcome-page.jsx"));
 const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage.jsx"));
 const AssistantPage = lazy(() => import("./pages/assistant-page.jsx"));
 const GoalsPage = lazy(() => import("./pages/goals-page.jsx"));
-const HabitsPage = lazy(() => import("./pages/habits-page.jsx"));
 const SettingsPage = lazy(() => import("./pages/settings-page.jsx"));
 const UsersPage = lazy(() => import("./pages/users-page.jsx"));
 const DailyPlannerPage = lazy(() => import("./pages/planner/PlannerPage.jsx"));
@@ -23,7 +22,6 @@ const NotFoundPage = lazy(() => import("./pages/not-found-page.jsx"));
 
 // New feature pages
 const GoalOnboarding = lazy(() => import("./pages/onboarding/GoalOnboarding.jsx"));
-const HabitLibraryPage = lazy(() => import("./pages/habits/HabitLibraryPage.jsx"));
 const AccountabilityPage = lazy(() => import("./pages/accountability/AccountabilityPage.jsx"));
 const TransformationJournal = lazy(() => import("./pages/reflection/TransformationJournal.jsx"));
 
@@ -109,22 +107,6 @@ const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoader />}>
                 <GoalsPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: "habits",
-            element: (
-              <Suspense fallback={<PageLoader />}>
-                <HabitsPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: "habits/library",
-            element: (
-              <Suspense fallback={<PageLoader />}>
-                <HabitLibraryPage />
               </Suspense>
             ),
           },

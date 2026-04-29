@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  Repeat,
   Settings,
   Shield,
   Target,
@@ -25,9 +24,8 @@ import { useState } from "react";
    ───────────────────────────────────────────────────────────────────────────── */
 const NAV_ITEMS = [
   { to: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
-  { to: "/planner",    label: "Planner",    icon: Calendar },
   { to: "/goals",      label: "Goals",      icon: Target },
-  { to: "/habits",     label: "Habits",     icon: Repeat },
+  { to: "/planner",    label: "Planner",    icon: Calendar },
   { to: "/focus",      label: "Deep Work",  icon: Zap },
   { to: "/reflection", label: "Reflection", icon: Brain },
   { to: "/assistant",  label: "AI Coach",   icon: Bot },

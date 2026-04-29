@@ -136,7 +136,7 @@ export function usePushNotifications() {
       });
       n.onclick = () => {
         window.focus();
-        window.location.href = "/habits";
+        window.location.href = "/goals";
         n.close();
       };
     }, ms);

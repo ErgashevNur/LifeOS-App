@@ -292,12 +292,12 @@ export default function OnboardingChat() {
   const handleAccept = (chosen) => {
     chosen.forEach(h => actions.addLocalHabit(h));
     actions.completeOnboarding(userProfile.personality);
-    navigate("/habits");
+    navigate("/goals");
   };
 
   const handleCustom = () => {
     actions.completeOnboarding(userProfile.personality);
-    navigate("/habits");
+    navigate("/goals");
   };
 
   const showInput = phase !== "analysis" && phase !== "suggest";

@@ -18,7 +18,7 @@ export default function HabitsTodaySection({ habits, doneHabits, today }) {
       <SectionLabel
         label="Bugungi odatlar"
         badge={`${doneHabits.length}/${habits.length}`}
-        linkTo="/habits"
+        linkTo="/goals"
       />
 
       <div className="flex items-center gap-4 mt-3 mb-3">
